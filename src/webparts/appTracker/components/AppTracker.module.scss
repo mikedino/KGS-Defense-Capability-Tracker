@@ -1,0 +1,574 @@
+@import '~@fluentui/react/dist/sass/References.scss';
+
+$navSurfaceBackground: $ms-color-neutralLighter;
+$navHoverBackground: $ms-color-neutralQuaternaryAlt;
+$appHeaderBackground: #0a314d;
+$appHeaderForeground: #ffffff;
+$appHeaderSubtleForeground: #e1dfdd;
+
+.applicationTracker {
+  padding: 0;
+  //background-color: $ms-color-white;
+  width: 100%;
+
+  .pageContent {
+    width: 100%;
+    max-width: 1600px;
+    margin-left: auto;
+    margin-right: auto;
+    padding: 20px;
+    box-sizing: border-box;
+  }
+
+  .title {
+    font-weight: 600;
+    color: $appHeaderForeground;
+    margin-bottom: 4px;
+    cursor: pointer;
+  }
+
+  .titleIcon {
+    font-size: 26px;
+    color: $appHeaderForeground;
+    margin-bottom: 4px;
+  }
+
+  .subtitle {
+    color: $ms-color-neutralSecondary;
+    margin-bottom: 20px;
+  }
+
+  .mainHeader {
+    padding: 20px;
+    background: $appHeaderBackground;
+    color: $appHeaderSubtleForeground;
+    border-bottom: 2px solid #e81123;
+    border-top: 1px solid #fff;
+  }
+
+  .headerRole {
+    color: $appHeaderSubtleForeground;
+  }
+
+  .headerIconButton {
+    color: $appHeaderSubtleForeground;
+
+    :global {
+      .ms-Button-icon {
+        color: $appHeaderSubtleForeground;
+      }
+    }
+
+    &:hover,
+    &:focus {
+      background: rgba(255, 255, 255, .12);
+      color: $appHeaderForeground;
+
+      :global {
+        .ms-Button-icon {
+          color: $appHeaderForeground;
+        }
+      }
+    }
+  }
+
+  .navSurface,
+  .mainNavBar,
+  .recordTabs {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    background: $navSurfaceBackground;
+
+    :global {
+      .ms-Pivot-link:not(.is-selected),
+      .ms-CommandBar,
+      .ms-CommandBar-primaryCommand,
+      .ms-CommandBar-sideCommands,
+      .ms-CommandBarItem-link {
+        background: transparent;
+      }
+
+      .ms-CommandBarItem-link:hover,
+      .ms-CommandBarItem-link:focus {
+        background: $navHoverBackground;
+        color: $ms-color-neutralPrimary;
+      }
+
+      .ms-Pivot-link:not(.is-selected):hover,
+      .ms-Pivot-link:not(.is-selected):focus {
+        background: $navHoverBackground;
+        color: $ms-color-neutralPrimary;
+      }
+    }
+  }
+
+  .navSurface {
+    gap: 0;
+
+    :global {
+      .ms-Pivot,
+      .ms-CommandBar {
+        flex: 0 0 auto;
+        width: auto;
+        text-align: left;
+      }
+    }
+  }
+
+  .recordTabs {
+    :global {
+      .ms-Pivot {
+        flex: 0 0 auto;
+        width: auto;
+        text-align: left;
+      }
+    }
+  }
+
+  .navSurfaceActions {
+    margin-left: auto;
+  }
+
+  .mainNavBar {
+    justify-content: space-between;
+    gap: 0 16px;
+    padding: 0 8px 0 0;
+    // border-top: 1px solid $ms-color-neutralLighter;
+    border-bottom: 1px solid $appHeaderBackground;
+  }
+
+  .mainNavTabs {
+    flex: 1 1 360px;
+    min-width: 280px;
+  }
+
+  .mainNavCommands {
+    flex: 0 1 auto;
+    min-width: 280px;
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .warningBanner {
+    display: flex;
+    gap: 12px;
+    padding: 12px 16px;
+    border-left: 4px solid #f4b740; // Fluent warning color
+    background-color: #fff8e1;
+    border-radius: 2px;
+    line-height: 1.5;
+  }
+
+  .warningIcon {
+    font-size: 20px;
+    color: #f4b740;
+    margin-top: 2px;
+  }
+
+  .hyperlink{
+    text-decoration: none;
+    word-break: break-all;
+
+    &:visited {
+      text-decoration: none;
+    }
+  }
+
+  /* Dashboard Stat Cards */
+  .statCard {
+    background-color: $ms-color-neutralLighter;
+    padding: 16px 20px;
+    border-radius: 4px;
+    border-left: 4px solid $ms-color-themePrimary;
+    min-width: 140px;
+    text-align: center;
+
+    .statNumber {
+      font-weight: 600;
+      color: $ms-color-themePrimary;
+      display: block;
+      margin-bottom: 4px;
+    }
+  }
+
+  /* Apps and Flows header stat cards */
+  .appStatCard {
+    background-color: #f3f2f1;
+    padding: 16px;
+    border-radius: 4px;
+    text-align: center;
+    min-width: 120px;
+  }
+
+  .dashboardTwoColumnGrid,
+  .dashboardBarGrid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 20px;
+    width: 100%;
+  }
+
+  .dashboardContent {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    align-self: stretch;
+    box-sizing: border-box;
+    padding-top: 24px;
+  }
+
+  .dashboardCell {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .dashboardChartFrame {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+
+    :global {
+      .ms-Legend {
+        max-width: 100%;
+      }
+    }
+  }
+
+  .commandBarWrapper {
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .solutionCard {
+    background-color: $ms-color-white;
+    border: 1px solid $ms-color-neutralLight;
+    border-radius: 4px;
+    padding: 16px;
+    margin-bottom: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    &:hover {
+      border-color: $ms-color-themePrimary;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .cardTitle {
+      font-weight: 600;
+      color: $ms-color-neutralPrimary;
+      margin-bottom: 8px;
+    }
+
+    .cardDescription {
+      color: $ms-color-neutralSecondary;
+      margin-bottom: 12px;
+      line-height: 1.4;
+    }
+
+    .cardMeta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+  }
+
+  /* SOLUTIONS LIST / DETAILS VIEWS */
+  .listView {
+    .listHeader {
+      background-color: $ms-color-neutralLighter;
+      padding: 12px 16px;
+      border-radius: 4px 4px 0 0;
+      border: 1px solid $ms-color-neutralLight;
+      font-weight: 600;
+      color: $ms-color-neutralPrimary;
+    }
+
+    .listItem {
+      padding: 12px 16px;
+      border: 1px solid $ms-color-neutralLight;
+      border-top: none;
+      cursor: pointer;
+      transition: background-color 0.2s ease;
+
+      &:hover {
+        background-color: $ms-color-neutralLighterAlt;
+      }
+
+      &:last-child {
+        border-radius: 0 0 4px 4px;
+      }
+    }
+  }
+
+  .tileView {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 16px;
+  }
+
+  .statusBadge {
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+
+    &.active {
+      background-color: #d4edda;
+      color: #155724;
+    }
+
+    &.inactive {
+      background-color: #f8d7da;
+      color: #721c24;
+    }
+
+    &.enhancement {
+      background-color: #d1ecf1;
+      color: #0c5460;
+    }
+  }
+
+  /* Iterations, Apps, Flows cards in Solution Details */
+  .customCard {
+    border: 1px solid #aeaeae;
+    border-radius: 8px;
+    padding: 16px;
+    background: #ffffff;
+    /*box-shadow: 0 1px 3px rgba(0,0,0,0.1);*/
+    box-shadow: inset 0px 0px 7px 2px rgba(0, 0, 0, .1);
+  }
+
+  .customCardHover {
+    &:hover {
+      background: #f9f9f8;
+    }
+  }
+
+  .customCardShaded {
+    border: 1px solid #aeaeae;
+    border-radius: 8px;
+    padding: 16px;
+    background: #fdfdfd;
+    //box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    box-shadow: inset 0px 0px 7px 2px rgba(0, 0, 0, .1);
+  }
+
+  .recordShell {
+    border: 1px solid $ms-color-neutralLight;
+    border-radius: 4px;
+    background: $ms-color-white;
+    overflow: hidden;
+  }
+
+  .recordHeader {
+    padding: 20px 24px 18px;
+    border-bottom: 1px solid $ms-color-neutralLighter;
+  }
+
+  .recordTabs {
+    padding: 0 24px;
+    border-bottom: 1px solid $ms-color-neutralLight;
+  }
+
+  .recordContent {
+    padding: 20px 24px 24px;
+  }
+
+  .detailCard {
+    border: 1px solid $ms-color-neutralLight;
+    border-radius: 4px;
+    padding: 16px;
+    background: $ms-color-white;
+  }
+
+  .linkedAppsFlows {
+    display: "inline-flex";
+    max-width: "fit-content";
+    border: 1px solid #d0d0d0;
+    padding: 8px;
+    border-radius: 8px;
+    box-shadow: inset 0 0 5px 1px rgb(84 84 84 / 10%);
+
+    .linkType {
+      font-size: 11px;
+      padding: 4px 10px;
+      border: 1px solid #8f8c8a;
+      border-radius: 20px;
+    }
+  }
+
+}
+
+/* DETAILS LIST FORMATING */
+.centeredColumn {
+  text-align: center;
+}
+
+.centeredHeader {
+  text-align: center;
+
+  :global {
+    .ms-DetailsHeader-cellTitle {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      /* small spacing between text and icon */
+    }
+  }
+}
+
+.deleteButton {
+  background-color: #a4262c;
+  color: white;
+  border: none;
+
+  &:disabled {
+    background-color: #f3f2f1;
+    color: #d2d0ce;
+    cursor: not-allowed;
+  }
+
+  &:not(:disabled):hover {
+    background-color: #d13438;
+  }
+
+  &:not(:disabled):active {
+    background-color: #a80000;
+  }
+
+  &:not(:disabled):focus {
+    background-color: #a4262c;
+  }
+}
+
+/******** APPLICATION SCREENSHOT *********/
+.screenshot {
+  flex-basis: 48%;
+  min-width: 450px;
+  max-width: 99%;
+  min-height: 350px;
+  max-height: 99%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    border-radius: 4px;
+  }
+
+  iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+  }
+
+  @media (max-width: 700px) {
+    flex-basis: 100%;
+  }
+}
+
+
+/* FORM / CONTROLS FORMATTING */
+.formControl {
+  :global {
+
+    // TextField
+    .ms-TextField-fieldGroup,
+    .ms-Dropdown-title,
+    .ms-BasePicker-text,
+    .ms-ComboBox,
+    .quill .ql-editor {
+      border: 1px solid #c8c6c4 !important;
+      border-radius: 4px;
+      background-color: #ffffff;
+    }
+
+    .pnp-richtext-quill-container .ql-editor, 
+    .pnp-richtext-quill-container .ql-editor p,
+    .pnp-richtext-quill-container .ql-editor div,
+    .pnp-richtext-quill-container .ql-editor ol,
+    .pnp-richtext-quill-container .ql-editor ul,
+    .pnp-richtext-quill-container .ql-editor li,
+    .pnp-richtext-quill-container .ql-editor span,
+    .pnp-richtext-quill-container .ql-snow .ql-editor {
+      font-size: 14px !important;
+    }
+
+    .pnp-richtext-quill-container .ql-active .ql-toolbar{
+      top: 0 !important;
+      position:  relative;
+      box-shadow: none;
+    }
+
+    .ms-TextField-field,
+    .ms-BasePicker-input,
+    .ms-ComboBox-input {
+      border: none !important;
+    }
+
+    .ms-ComboBox::after {
+      content: none !important; // remove the pseudo class border
+    }
+
+    .ms-TextField-description {
+      color: rgb(96, 94, 92);
+      font-size: 10px;
+    }
+  }
+}
+
+// Responsive design
+@media (max-width: 768px) {
+  .applicationTracker {
+    .mainHeader {
+      align-items: flex-start;
+      gap: 8px;
+      padding: 12px;
+    }
+
+    .pageContent {
+      padding: 12px;
+    }
+
+    .mainNavBar {
+      padding: 0;
+    }
+
+    .mainNavTabs,
+    .mainNavCommands {
+      flex-basis: 100%;
+      min-width: 0;
+    }
+
+    .mainNavCommands {
+      justify-content: flex-start;
+    }
+
+    .dashboardTwoColumnGrid,
+    .dashboardBarGrid {
+      grid-template-columns: 1fr;
+    }
+
+    .tileView {
+      grid-template-columns: 1fr;
+    }
+  }
+}
+
+@media (max-width: 1100px) {
+  .applicationTracker {
+    .dashboardBarGrid {
+      grid-template-columns: 1fr;
+    }
+  }
+}

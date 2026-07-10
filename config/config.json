@@ -1,0 +1,19 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/spfx-build/config.2.0.schema.json",
+  "version": "2.0",
+  "bundles": {
+    "app-tracker-web-part": {
+      "components": [
+        {
+          "entrypoint": "./lib/webparts/appTracker/AppTrackerWebPart.js",
+          "manifest": "./src/webparts/appTracker/AppTrackerWebPart.manifest.json"
+        }
+      ]
+    }
+  },
+  "externals": {},
+  "localizedResources": {
+    "AppTrackerWebPartStrings": "lib/webparts/appTracker/loc/{locale}.js",
+    "ControlStrings": "node_modules/@pnp/spfx-controls-react/lib/loc/en-us.js"
+  }
+}
