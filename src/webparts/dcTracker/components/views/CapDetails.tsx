@@ -260,7 +260,7 @@ export const AppDetails: React.FC<AppDetailsProps> = ({ capability, context, onB
             if (docFolderStatus !== "ready") {
                 // if folder status is not ready, check for one using helper
                 setSpinnerProps("Checking for document folder...");
-                const isFolderPresent = await DocumentService.ensureAppDocumentFolder(capState.Id);
+                const isFolderPresent = await DocumentService.ensureCapDocumentFolder(capState.Id);
                 if (isFolderPresent) {
                     setDocFolderStatus("ready");
                 } else {

@@ -6,7 +6,7 @@ import { ContextInfo } from "gd-sprest-bs";
 
 export class DocumentService {
 
-    //upon creation of a new solution > create a folder in the documents library to store docs
+    //upon creation of a new capability > create a folder in the documents library to store docs
     static createCapabilityFolder(capabilityId: number): Promise<void> {
         return new Promise<void>((resolve, reject) => {
             const list = Web().Lists(Strings.Lists.Documents);
@@ -27,9 +27,8 @@ export class DocumentService {
     }
 
     // check to verify a folder exists before uploading
-    // check to verify a folder exists before uploading
-    static async ensureAppDocumentFolder(appId: number): Promise<boolean> {
-        const folderUrl = `${ContextInfo.webServerRelativeUrl}/${Strings.Lists.Documents}/${appId}`;
+    static async ensureCapDocumentFolder(capId: number): Promise<boolean> {
+        const folderUrl = `${ContextInfo.webServerRelativeUrl}/${Strings.Lists.Documents}/${capId}`;
 
         try {
             const resp = await Web().getFolderByServerRelativeUrl(folderUrl).executeAndWait();
