@@ -1,7 +1,7 @@
 {
   "$schema": "https://developer.microsoft.com/json-schemas/spfx-build/package-solution.schema.json",
   "solution": {
-    "name": "KGS Application Tracker",
+    "name": "KGS Defense Capabilities Tracker",
     "id": "892091bb-900a-4918-887b-c53ce7b3352e",
     "version": "1.0.0.1",
     "includeClientSideAssets": true,
@@ -16,10 +16,10 @@
     },
     "metadata": {
       "shortDescription": {
-        "default": "KGS Application Tracker description"
+        "default": "KGS Defense Capabilities Tracker description"
       },
       "longDescription": {
-        "default": "KGS Application Tracker description"
+        "default": "KGS Defense Capabilities Tracker description"
       },
       "screenshotPaths": [],
       "videoUrl": "",
@@ -27,14 +27,14 @@
     },
     "features": [
       {
-        "title": "kgs-application-tracker Feature",
-        "description": "The feature that activates elements of the kgs-application-tracker solution.",
+        "title": "kgs-dct Feature",
+        "description": "The feature that activates elements of the kgs-dct solution.",
         "id": "c26c6504-0b9a-4569-847d-0f1aa75919f7",
         "version": "1.0.0.1"
       }
     ]
   },
   "paths": {
-    "zippedPackage": "solution/kgs-application-tracker.sppkg"
+    "zippedPackage": "solution/kgs-dct.sppkg"
   }
 }

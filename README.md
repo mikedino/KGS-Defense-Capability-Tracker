@@ -1,8 +1,8 @@
-# kgs-application-tracker
+# KGS Defense Capabilities Tracker
 
 ## Summary
 
-A single page transportable app used to track Applications for a Bureau or organization. This app also tracks basic contract information related to each application.
+A single page transportable app used to track Capabilities for a Bureau or organization. This app also tracks basic contract information related to each capability.
 
 ## Used SharePoint Framework Version
 
@@ -23,7 +23,7 @@ The person running the app for the first time must have Full Control of the site
 
 | Solution | Author(s) |
 | -------------------------- | ------------------------------------------------------- |
-| KGS Application Tracker | Mike Landino, Koniag Government Services |
+| KGS Defense Capabilities Tracker | Mike Landino, Koniag Government Services |
 
 ## Version history
 
