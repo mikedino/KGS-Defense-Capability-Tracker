@@ -1,22 +1,17 @@
 import { Web } from "gd-sprest-bs";
 import { WebPartContext } from '@microsoft/sp-webpart-base';
 import Strings, { setContext } from "../common/strings";
-import { ICapabilityItem, IConfigurationItem, IContractItem, IDocumentItem } from "../common/props";
+import { ConfigType, ICapabilityItem, IConfigItem, IContractEndPointItem, IContractItem, IDocumentItem, IOpportunityItem } from "../common/props";
 import { formatError } from "../common/utils";
+import { ConfigService } from "../services/ConfigService";
+import { parseJsonTagField } from "../common/tagUtils";
+
+export interface IConfigOption {
+    key: string;
+    text: string;
+}
 
 export class DataSource {
-    private static readonly defaultConfigValuesByFor = new Map<string, string[]>([
-        ["capStatus", ["Active", "In Dev", "Pending"]],
-        ["platform", ["SharePoint", "Web", "Desktop"]],
-        ["hostingEnv", ["SharePoint Online", "Azure", "On-Premises"]],
-        ["connectivity", ["Internal", "External", "Hybrid"]],
-        ["compliance", ["FedRAMP", "FISMA", "N/A"]],
-        ["codeLanguage", ["C#", "Java", "TypeScript"]],
-        ["backend", ["SharePoint", "SQL", "Oracle"]],
-        ["customer", ["DOW", "DOS", "USN"]],
-        ["partner", ["LMI", "Guidehouse"]]
-    ]);
-
     //prevent this from being initialized twice
     static initialized: boolean = false;
 
@@ -31,11 +26,19 @@ export class DataSource {
 
         if (!this.initialized || override) { //ensure this was not already initialized and not manually being refreshed
 
-            return Promise.all([
-                this.getConfig(),
-                this.getContracts(),
-                this.getCapabilities()
-            ]).then(() => {
+            return this.getConfig().then(async () => {
+                const addedConfigSeedItems = await ConfigService.ensureSeedItems();
+                if (addedConfigSeedItems > 0) {
+                    console.log(`[${Strings.ProjectName}] Seeded Config items. Added: ${addedConfigSeedItems}.`);
+                    await this.getConfig();
+                }
+
+                await Promise.all([
+                    this.getContracts(),
+                    this.getCapabilities(),
+                    this.getJamisContracts()
+                ]);
+            }).then(() => {
                 this.initialized = true;
             }).catch((error) => {
                 const errorMessage = formatError(error);
@@ -50,64 +53,74 @@ export class DataSource {
     }
 
     // Store raw config for debugging and admin screen
-    private static _config: IConfigurationItem[] = [];
-    static get Config(): IConfigurationItem[] { return this._config; }
+    private static _config: IConfigItem[] = [];
+    static get Config(): IConfigItem[] { return this._config; }
 
     // Grouped items
-    private static _configByFor = new Map<string, IConfigurationItem[]>();
-    static get ConfigByFor(): ReadonlyMap<string, IConfigurationItem[]> { return this._configByFor; }
+    private static _configByType = new Map<string, IConfigItem[]>();
+    static get ConfigByType(): ReadonlyMap<string, IConfigItem[]> { return this._configByType; }
 
-    // Grouped values (Title)
-    private static _configValuesByFor = new Map<string, string[]>();
-    static get ConfigValuesByFor(): ReadonlyMap<string, string[]> { return this._configValuesByFor; }
+    // Grouped values (configValue)
+    private static _configValuesByType = new Map<string, string[]>();
+    static get ConfigValuesByType(): ReadonlyMap<string, string[]> { return this._configValuesByType; }
 
     // Convenience helper
-    static getConfigValues(isFor: string): string[] {
-        const configured = this._configValuesByFor.get(isFor) ?? [];
-        return configured.length ? configured : (this.defaultConfigValuesByFor.get(isFor) ?? []);
+    static getConfigValues(configType: ConfigType | string): string[] {
+        return this._configValuesByType.get(configType) ?? [];
+    }
+
+    static getConfigOptions(configType: ConfigType | string): IConfigOption[] {
+        return (this._configByType.get(configType) ?? [])
+            .filter(item => item.isActive !== false)
+            .sort((a, b) => (a.sortOrder ?? 9999) - (b.sortOrder ?? 9999) || (a.Title ?? "").localeCompare(b.Title ?? ""))
+            .map(item => ({
+                key: item.configValue,
+                text: item.Title || item.configValue
+            }));
     }
 
     // get/set config
-    static getConfig(): Promise<IConfigurationItem[]> {
-        return new Promise<IConfigurationItem[]>((resolve, reject) => {
+    static configSelect = ["Id", "Title", "configType", "configValue", "sortOrder", "isActive", "infoText"];
+    static getConfig(): Promise<IConfigItem[]> {
+        return new Promise<IConfigItem[]>((resolve, reject) => {
 
             // clear the items
             this._config = [];
-            this._configByFor = new Map<string, IConfigurationItem[]>();
-            this._configValuesByFor = new Map<string, string[]>();
+            this._configByType = new Map<string, IConfigItem[]>();
+            this._configValuesByType = new Map<string, string[]>();
 
             // load the data
-            Web().Lists(Strings.Lists.Configuration).Items().query({
+            Web().Lists(Strings.Sites.main.lists.Configuration).Items().query({
                 GetAllItems: true,
-                OrderBy: ["isFor"],
-                Select: ["Id", "Title", "isFor", "isForDisplayName", "infoText", "isActive"],
-                //Filter: "isActive eq 1",
-                Top: 5000
+                OrderBy: ["configType", "sortOrder", "Title"],
+                Select: this.configSelect,
+                Filter: "isActive eq 1"
             }).execute(
                 (items) => {
                     if (items?.results?.length) {
-                        const results = items.results as unknown as IConfigurationItem[];
+                        const results = items.results as unknown as IConfigItem[];
                         this._config = results;
 
                         // Group + build value arrays
                         for (const item of results) {
-                            const forKey = (item.isFor ?? "").trim();
-                            if (!forKey) continue;
+                            const typeKey = (item.configType ?? "").trim();
+                            const value = (item.configValue ?? "").trim();
+                            if (!typeKey || !value || item.isActive === false) continue;
 
-                            const list = this._configByFor.get(forKey) ?? [];
+                            const list = this._configByType.get(typeKey) ?? [];
                             list.push(item);
-                            this._configByFor.set(forKey, list);
+                            this._configByType.set(typeKey, list);
 
-                            const values = this._configValuesByFor.get(forKey) ?? [];
-                            if (item.Title) values.push(item.Title);
-                            this._configValuesByFor.set(forKey, values);
+                            const values = this._configValuesByType.get(typeKey) ?? [];
+                            values.push(value);
+                            this._configValuesByType.set(typeKey, values);
                         }
 
                         // Optional: dedupe + sort values per key
-                        for (const [k, vals] of this._configValuesByFor.entries()) {
+                        for (const [k, vals] of this._configValuesByType.entries()) {
                             const unique = Array.from(new Set(vals.map(v => v.trim()).filter(Boolean)));
                             unique.sort((a, b) => a.localeCompare(b));
-                            this._configValuesByFor.set(k, unique);
+                            this._configValuesByType.set(k, unique);
                         }
 
                         resolve(results);
@@ -123,15 +136,11 @@ export class DataSource {
 
     // Load the Contracts
     static contractQuerySelect: string[] = [
-        "Id", "Title", "contractId", "invoice", "customerContractCode", "customer",
-        "popStart", "popEnd", "partner", "infoLink",
-        "contractPm/Id", "contractPm/Title", "contractPm/EMail", "contractPm/JobTitle", "contractPm/Department",
-        "primaryPoc/Id", "primaryPoc/Title", "primaryPoc/EMail", "primaryPoc/JobTitle",
-        "primaryPoc/Department",
-        "stakeholders/Id", "stakeholders/Title", "stakeholders/EMail", "stakeholders/JobTitle",
-        "stakeholders/Department"
+        "Id", "Title", "capability/Id", "capability/Title", "contractId", "customerContractCode", "customer",
+        "startDate", "endDate", "partner", "infoLink",
+        "contractPm/Id", "contractPm/Title", "contractPm/EMail", "contractPm/JobTitle", "contractPm/Department"
     ];
-    static contractQueryExpand: string[] = ["contractPm", "primaryPoc", "stakeholders"];
+    static contractQueryExpand: string[] = ["capability", "contractPm"];
     private static _contracts: IContractItem[] = [];
     static get Contracts(): IContractItem[] { return this._contracts; }
     private static getContracts(): Promise<IContractItem[]> {
@@ -141,12 +150,11 @@ export class DataSource {
             this._contracts = [];
 
             // load the data
-            Web().Lists(Strings.Lists.Contracts).Items().query({
+            Web().Lists(Strings.Sites.main.lists.Contracts).Items().query({
                 GetAllItems: true,
                 Select: this.contractQuerySelect,
                 OrderBy: ["Title"],
-                Expand: this.contractQueryExpand,
-                Top: 5000
+                Expand: this.contractQueryExpand
             }).execute(
                 // Success
                 (items) => {
@@ -172,10 +180,12 @@ export class DataSource {
         "Id", "Title", "description", "capabilities", "link", "capStatus", "notes",
         "platform", "hostingEnv", "connectivity", "compliance", "licenseReqd",
         "licenseReqmts", "extensibility", "serverReqmts", "codeLanguage", "backend",
-        "contract/Id", "contract/Title", "contract/contractId", "Modified",
+        "oppNetTagsJson", "Modified",
+        "primaryPoc/Id", "primaryPoc/Title", "primaryPoc/EMail", "primaryPoc/JobTitle", "primaryPoc/Department",
+        "stakeholders/Id", "stakeholders/Title", "stakeholders/EMail", "stakeholders/JobTitle", "stakeholders/Department",
         "Author/Title", "Author/EMail", "Author/Id"
     ]
-    static capabilityQueryExpand: string[] = ["contract", "Author"];
+    static capabilityQueryExpand: string[] = ["primaryPoc", "stakeholders", "Author"];
     private static _capabilities: ICapabilityItem[] = [];
     static get Capabilities(): ICapabilityItem[] { return this._capabilities; }
     private static getCapabilities(): Promise<ICapabilityItem[]> {
@@ -185,24 +195,26 @@ export class DataSource {
             this._capabilities = [];
 
             // load the data
-            Web().Lists(Strings.Lists.Capabilities).Items().query({
+            Web().Lists(Strings.Sites.main.lists.Capabilities).Items().query({
                 GetAllItems: true,
                 OrderBy: ["Modified desc"],
                 Select: this.capabilityQuerySelect,
-                Expand: this.capabilityQueryExpand,
-                Top: 5000
+                Expand: this.capabilityQueryExpand
             }).execute(
                 // Success
                 (items) => {
                     if (items?.results?.length) {
-                        this._capabilities = items.results as unknown as ICapabilityItem[];
+                        this._capabilities = (items.results as unknown as ICapabilityItem[]).map((item) => ({
+                            ...item,
+                            oppNetTags: parseJsonTagField(item.oppNetTagsJson)
+                        }));
                         resolve(this._capabilities);
                     } else {
                         //none found - resolve with empty array
                         resolve([])
                     }
                 },
-                (error) => reject(new Error(`Error fetching App items: ${formatError(error)}`))
+                (error) => reject(new Error(`Error fetching Capability items: ${formatError(error)}`))
             )
         });
     }
@@ -213,7 +225,7 @@ export class DataSource {
         return new Promise<IDocumentItem[]>((resolve, reject) => {
 
             // load the data
-            Web().Lists(Strings.Lists.Documents).Items().query({
+            Web().Lists(Strings.Sites.main.lists.Documents).Items().query({
                 Select: ["File_x0020_Type", "UniqueId", "Id", "ServerRedirectedEmbedUrl", "EncodedAbsUrl", "FileLeafRef", "capability/Id",
                     "Modified", "Editor/Id", "Editor/EMail", "Editor/Title", "docType"],
                 Filter: `capability/Id eq ${appId}`,
@@ -243,7 +255,7 @@ export class DataSource {
         return new Promise<IDocumentItem[]>((resolve, reject) => {
 
             // load the data
-            Web().Lists(Strings.Lists.Documents).Items().query({
+            Web().Lists(Strings.Sites.main.lists.Documents).Items().query({
                 Select: ["File_x0020_Type", "UniqueId", "Id", "ServerRedirectedEmbedUrl", "EncodedAbsUrl",
                     "FileLeafRef", "capability/Id", "docType", "Modified", "Editor/Id", "Editor/EMail", "Editor/Title"],
                 Filter: `docType eq 'Screenshot'`,
@@ -263,6 +275,64 @@ export class DataSource {
                     reject(new Error(`Error getting screenshots: ${formatError(error)}`));
                 }
             )
+        });
+    }
+
+    //GET CONTRACTS FROM JAMIS ENDPOINT
+    private static _jamisContracts: IContractEndPointItem[] = [];
+    static get JamisContracts(): IContractEndPointItem[] { return this._jamisContracts; }
+    static getJamisContracts(): Promise<IContractEndPointItem[]> {
+        return new Promise<IContractEndPointItem[]>((resolve, reject) => {
+            this._jamisContracts = [];
+
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            Web(Strings.Sites.jamis.url)
+                .Lists(Strings.Sites.jamis.lists.ContractEP)
+                .Items()
+                .query({
+                    GetAllItems: true,
+                    OrderBy: ["field_20"],
+                    Select: [
+                        "Id", "Title", "field_19", "field_20", "field_35", "field_21", "field_23"
+                    ]
+                })
+                .execute(
+                    (items) => {
+                        this._jamisContracts = (items?.results ?? []) as unknown as IContractEndPointItem[];
+                        resolve(this._jamisContracts);
+                    },
+                    (error) => reject(new Error(`Error fetching Jamis Contracts: ${formatError(error)}`))
+                );
+        });
+    }
+
+    //GET OPPORTUNITIES FROM OPPNET SITE
+    private static _opportunities: IOpportunityItem[] = [];
+    static get Opportunities(): IOpportunityItem[] { return this._opportunities; }
+    static getOpportunities(): Promise<IOpportunityItem[]> {
+        return new Promise<IOpportunityItem[]>((resolve, reject) => {
+            this._opportunities = [];
+
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            Web(Strings.Sites.oppNet.url)
+                .Lists(Strings.Sites.oppNet.lists.Opportunities)
+                .Items()
+                .query({
+                    GetAllItems: true,
+                    OrderBy: ["Title"],
+                    Select: ["Id", "Title", "Customer", "Status"]
+                })
+                .execute(
+                    (items) => {
+                        this._opportunities = (items?.results ?? []) as unknown as IOpportunityItem[];
+                        resolve(this._opportunities);
+                    },
+                    (error) => reject(new Error(`Error fetching Opportunities: ${formatError(error)}`))
+                );
         });
     }
 

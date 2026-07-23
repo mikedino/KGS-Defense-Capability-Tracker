@@ -9,7 +9,7 @@ export class DocumentService {
     //upon creation of a new capability > create a folder in the documents library to store docs
     static createCapabilityFolder(capabilityId: number): Promise<void> {
         return new Promise<void>((resolve, reject) => {
-            const list = Web().Lists(Strings.Lists.Documents);
+            const list = Web().Lists(Strings.Sites.main.lists.Documents);
 
             try {
                 list.RootFolder().Folders()
@@ -28,7 +28,7 @@ export class DocumentService {
 
     // check to verify a folder exists before uploading
     static async ensureCapDocumentFolder(capId: number): Promise<boolean> {
-        const folderUrl = `${ContextInfo.webServerRelativeUrl}/${Strings.Lists.Documents}/${capId}`;
+        const folderUrl = `${ContextInfo.webServerRelativeUrl}/${Strings.Sites.main.lists.Documents}/${capId}`;
 
         try {
             const resp = await Web().getFolderByServerRelativeUrl(folderUrl).executeAndWait();
@@ -45,7 +45,7 @@ export class DocumentService {
 
     static edit(doc: IDocumentItem): Promise<IDocumentItem> {
         return new Promise<IDocumentItem>((resolve, reject) => {
-            Web().Lists(Strings.Lists.Documents).Items(doc.Id).update({
+            Web().Lists(Strings.Sites.main.lists.Documents).Items(doc.Id).update({
                 Title: doc.Title
             }).execute(
                 //success
@@ -69,7 +69,7 @@ export class DocumentService {
         return new Promise<void>((resolve, reject) => {
 
             // Delete the item
-            Web().Lists(Strings.Lists.Documents).Items(documentId).delete().execute(
+            Web().Lists(Strings.Sites.main.lists.Documents).Items(documentId).delete().execute(
                 // Success
                 () => {
                     // Resolve the promise

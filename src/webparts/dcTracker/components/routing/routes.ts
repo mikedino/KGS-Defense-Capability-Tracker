@@ -1,6 +1,6 @@
-export type AppRouteTab = "overview" | "supporting" | "contract" | "documentation";
+export type CapRouteTab = "overview" | "supporting" | "contract" | "documentation";
 
-export const tabFromSlug = (slug?: string): AppRouteTab => {
+export const tabFromSlug = (slug?: string): CapRouteTab => {
     switch ((slug ?? "").toLowerCase()) {
         case "support":
             return "supporting";
@@ -14,7 +14,7 @@ export const tabFromSlug = (slug?: string): AppRouteTab => {
     }
 };
 
-export const tabToSlug = (tab: AppRouteTab): string => {
+export const tabToSlug = (tab: CapRouteTab): string => {
     switch (tab) {
         case "supporting":
             return "support";
@@ -34,7 +34,7 @@ export const routes = {
     capabilities: "/capabilities",
     contracts: "/contracts",
     admin: "/admin",
-    app: (appId: number, tab: AppRouteTab = "overview"): string => `/apps/${appId}/${tabToSlug(tab)}`,
+    cap: (capId: number, tab: CapRouteTab = "overview"): string => `/caps/${capId}/${tabToSlug(tab)}`,
     contract: (contractId: number): string => `/contracts/${contractId}`
 };
 

@@ -3,15 +3,22 @@ import { Web } from "gd-sprest";
 import Strings from "../common/strings";
 import { formatError, encodeListName } from "../common/utils";
 import { DataSource } from "../data/ds";
+import { normalizeOppNetTag, serializeJsonTagField } from "../common/tagUtils";
 
+interface ICapabilityPayload extends Omit<ICapabilityItem, "Id"> {
+    __metadata: { type: string };
+    primaryPocId: number | undefined;
+    stakeholdersId: { results: number[] };
+    oppNetTagsJson: string;
+}
 
 export class CapabilityService {
     
     private static getListItemType(): string {
-        return `SP.Data.${encodeListName(Strings.Lists.Capabilities)}ListItem`;
+        return `SP.Data.${encodeListName(Strings.Sites.main.lists.Capabilities)}ListItem`;
     }
 
-    private static buildPayload(item: ICapabilityItem): Record<string, unknown> {
+    private static buildPayload(item: ICapabilityItem): ICapabilityPayload {
         return {
             __metadata: { type: CapabilityService.getListItemType() },
             Title: item.Title,
@@ -30,12 +37,14 @@ export class CapabilityService {
             serverReqmts: item.serverReqmts,
             codeLanguage: item.codeLanguage,
             backend: item.backend,
-            contractId: item.contract?.Id ?? null,
+            primaryPocId: item.primaryPoc?.Id,
+            stakeholdersId: { results: item.stakeholders?.results.map((person) => person.Id) ?? [] },
+            oppNetTagsJson: serializeJsonTagField(item.oppNetTags?.map(normalizeOppNetTag))
         };
     }
 
-    private static loadAppById(itemId: number): ICapabilityItem {
-        const item = Web().Lists(Strings.Lists.Capabilities).Items(itemId.toString())
+    private static loadCapById(itemId: number): ICapabilityItem {
+        const item = Web().Lists(Strings.Sites.main.lists.Capabilities).Items(itemId.toString())
             .query({
                 Select: DataSource.capabilityQuerySelect,
                 Expand: DataSource.capabilityQueryExpand
@@ -47,10 +56,10 @@ export class CapabilityService {
 
     static create(item: ICapabilityItem): Promise<ICapabilityItem> {
         return new Promise<ICapabilityItem>((resolve, reject) => {
-            Web().Lists(Strings.Lists.Capabilities).Items().add(CapabilityService.buildPayload(item)).execute(
+            Web().Lists(Strings.Sites.main.lists.Capabilities).Items().add(CapabilityService.buildPayload(item)).execute(
                 (resp) => {
                     if (resp && resp.existsFl && resp.Id) {
-                        const newItem: ICapabilityItem = CapabilityService.loadAppById(resp.Id);
+                        const newItem: ICapabilityItem = CapabilityService.loadCapById(resp.Id);
                         resolve(newItem);
                         return;
                     }
@@ -68,10 +77,10 @@ export class CapabilityService {
 
     static edit(item: ICapabilityItem): Promise<ICapabilityItem> {
         return new Promise<ICapabilityItem>((resolve, reject) => {
-            Web().Lists(Strings.Lists.Capabilities).Items().getById(item.Id).update(CapabilityService.buildPayload(item)).execute(
+            Web().Lists(Strings.Sites.main.lists.Capabilities).Items().getById(item.Id).update(CapabilityService.buildPayload(item)).execute(
                 (resp) => {
                     if (resp && resp.existsFl) {
-                        const updatedItem: ICapabilityItem = CapabilityService.loadAppById(item.Id);
+                        const updatedItem: ICapabilityItem = CapabilityService.loadCapById(item.Id);
                         resolve(updatedItem);
                         return;
                     }
@@ -80,7 +89,7 @@ export class CapabilityService {
                 },
                 (error) => {
                     const err: string = formatError(error);
-                    console.error(`Error updating App ${err}`);
+                    console.error(`Error updating Capability ${err}`);
                     reject(error);
                 }
             );
@@ -90,14 +99,14 @@ export class CapabilityService {
 
     static delete(itemId: number): Promise<void> {
         return new Promise<void>((resolve, reject) => {
-            Web().Lists(Strings.Lists.Capabilities).Items(itemId).delete().execute(
+            Web().Lists(Strings.Sites.main.lists.Capabilities).Items(itemId).delete().execute(
                 () => {
-                    console.info(`Deleted App item ${itemId} !`)
+                    console.info(`Deleted Capability item ${itemId} !`)
                     resolve();
                 },
                 (error) => {
                     const err = formatError(error);
-                    console.error(`Error deleting App item: ${err}`);
+                    console.error(`Error deleting Capability item: ${err}`);
                     reject(error);
                 }
             )

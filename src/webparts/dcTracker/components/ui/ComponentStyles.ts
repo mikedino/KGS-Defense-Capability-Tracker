@@ -25,7 +25,7 @@ export const customPivotStyles: Partial<IPivotStyles> = {
   }
 };
 
-/***** App, Flow, Iteration card galleries *****/
+/***** Capability card gallery *****/
 export const compactButtonStyles: IButtonStyles = {
   root: {
     height: 24,

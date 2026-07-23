@@ -1,3 +1,6 @@
+import { Web } from "gd-sprest-bs";
+import { IPeoplePickerExtended } from "./props";
+
 export const formatError = (error: unknown): string => {
 
     // if it's a string, return the string
@@ -72,6 +75,36 @@ export const formatDate = (
 
     const date = new Date(dateInput);
     return isNaN(date.getTime()) ? '-' : date.toLocaleDateString(locale);
+};
+
+export const onFormatDate = (date?: Date): string => {
+    if (!date) return "";
+    return `${(date.getMonth() + 1).toString().padStart(2, "0")}/` +
+        `${date.getDate().toString().padStart(2, "0")}/` +
+        `${date.getFullYear().toString().slice(-2)}`;
+};
+
+export const resolveUserByEmail = (email?: string, fallbackName?: string): Promise<IPeoplePickerExtended | undefined> => {
+    const normalizedEmail = (email ?? "").trim();
+    if (!normalizedEmail) return Promise.resolve(undefined);
+
+    return new Promise<IPeoplePickerExtended | undefined>((resolve) => {
+        Web().ensureUser(normalizedEmail).execute(
+            (userInfo?: { Id?: number; Email?: string; EMail?: string; Title?: string }) => {
+                if (!userInfo?.Id) {
+                    resolve(undefined);
+                    return;
+                }
+
+                resolve({
+                    Id: userInfo.Id,
+                    EMail: userInfo.Email || userInfo.EMail || normalizedEmail,
+                    Title: userInfo.Title || fallbackName || normalizedEmail
+                });
+            },
+            () => resolve(undefined)
+        );
+    });
 };
 
 /**

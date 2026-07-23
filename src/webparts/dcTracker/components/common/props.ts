@@ -2,11 +2,11 @@ import { IPersonaProps } from "@fluentui/react/lib/Persona";
 import type { WebPartContext } from "@microsoft/sp-webpart-base"
 
 export interface IDCTrackerProps {
-  appDescription: string;
-  context: WebPartContext;
+    appDescription: string;
+    context: WebPartContext;
 }
 
-interface ILookupItem {
+export interface ILookupItem {
     readonly Id: number;
     Title: string;
     contractId?: string;
@@ -25,6 +25,16 @@ export interface IPeoplePickerExtended extends IPeoplePicker {
 
 export type DocumentType = "Screenshot" | "Other";
 export type licenseReqdChoices = "Yes" | "No";
+export type ConfigType =
+    | "backend"
+    | "capabilityStatus"
+    | "codingLanguage"
+    | "compliance"
+    | "connectivity"
+    | "customer"
+    | "partner"
+    | "hostingEnvironment"
+    | "platform";
 //export type CapabilityStatus = "Active" | "In Dev" | "Pending"
 
 export interface ICapabilityItem {
@@ -38,6 +48,8 @@ export interface ICapabilityItem {
     capabilities?: string; //multi-line
     link?: string;
     capStatus: string; //config
+    primaryPoc?: IPeoplePickerExtended; //Capability Primary POC
+    stakeholders?: { results: IPeoplePickerExtended[] }
     notes?: string; //multi-line
 
     /* TECHNICAL INFO */
@@ -52,24 +64,33 @@ export interface ICapabilityItem {
     codeLanguage?: string;
     backend?: string;
 
-    /* CONTRACT INFO */
-    contract?: ILookupItem;
+    /* TAGS */
+    oppNetTagsJson?: string;
+    oppNetTags?: IOppNetTagValue[];
 }
 
 export interface IContractItem {
     readonly Id: number;
+    capability?: ILookupItem;
     Title: string; //Contract Title
     contractId?: string;
-    invoice?: string;
     customerContractCode?: string;
     customer?: string;
-    popStart?: string; //date
-    popEnd?: string; //date
+    startDate?: string; //date
+    endDate?: string; //date
     contractPm?: IPeoplePickerExtended; //KGS Contract Project Manager
-    primaryPoc?: IPeoplePickerExtended; //Capability Primary POC
-    stakeholders?: { results: IPeoplePickerExtended[] }
     partner?: string; //config 
     infoLink?: string;
+}
+
+export interface ICapabilityContractDraft extends IContractItem {
+    tempId?: string;
+}
+
+export interface ICapFormSaveResult {
+    capability: ICapabilityItem;
+    contracts: ICapabilityContractDraft[];
+    deletedContractIds: number[];
 }
 
 export interface IContractEndPointItem {
@@ -100,11 +121,27 @@ export interface IDocumentItem {
 }
 
 
-export interface IConfigurationItem {
+export interface IConfigItem {
     readonly Id: number;
-    Title: string;
-    isFor: string;
-    isForDisplayName: string;
+    Title: string; // Display Text
+    configType: ConfigType | string;
+    configValue: string; // compared value/saved value
+    sortOrder?: number;
     isActive: boolean;
-    infoText: string;
+    infoText?: string;
+}
+
+export interface IOpportunityItem {
+    readonly Id: number;
+    Title?: string;
+    Customer?: string;
+    Status?: string;
+}
+
+export interface IOppNetTagValue {
+    id: number;
+    title: string;
+    customer?: string;
+    status?: string;
+    url?: string;
 }

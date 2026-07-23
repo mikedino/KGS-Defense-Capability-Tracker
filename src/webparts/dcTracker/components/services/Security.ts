@@ -1,5 +1,5 @@
 import { ListSecurity } from "dattatable";
-import { ContextInfo, SPTypes, Types } from "gd-sprest-bs";
+import { ContextInfo, Helper, SPTypes, Types, Web } from "gd-sprest-bs";
 import Strings from "../common/strings";
 
 /**
@@ -44,6 +44,7 @@ export class Security {
     };
 
     // Visitors
+    private static _canViewCaps = false;
     private static _isVisitor = false;
     static get IsVisitor(): boolean { return this._isVisitor; }
     private static _visitors: Types.SP.GroupOData | undefined;
@@ -64,72 +65,72 @@ export class Security {
             this.currentUserID = ContextInfo.userId;
 
             this._listSecurity = new ListSecurity({
-                webUrl: Strings.SiteUrl,
+                webUrl: Strings.Sites.main.url,
                 groups: [
                     this._adminGroupInfo, this._contributorGroupInfo, this._visitorGroupInfo
                 ],
                 listItems: [
                     //Capabilities list
                     {
-                        listName: Strings.Lists.Capabilities,
+                        listName: Strings.Sites.main.lists.Capabilities,
                         groupName: Strings.Groups.Admins,
                         permission: SPTypes.RoleType.Administrator
                     },
                     {
-                        listName: Strings.Lists.Capabilities,
+                        listName: Strings.Sites.main.lists.Capabilities,
                         groupName: Strings.Groups.Contributors,
                         permission: SPTypes.RoleType.Contributor
                     },
                     {
-                        listName: Strings.Lists.Capabilities,
+                        listName: Strings.Sites.main.lists.Capabilities,
                         groupName: Strings.Groups.Visitors,
                         permission: SPTypes.RoleType.Reader
                     },
                     //Documents list
                     {
-                        listName: Strings.Lists.Documents,
+                        listName: Strings.Sites.main.lists.Documents,
                         groupName: Strings.Groups.Admins,
                         permission: SPTypes.RoleType.Administrator
                     },
                     {
-                        listName: Strings.Lists.Documents,
+                        listName: Strings.Sites.main.lists.Documents,
                         groupName: Strings.Groups.Contributors,
                         permission: SPTypes.RoleType.Contributor
                     },
                     {
-                        listName: Strings.Lists.Documents,
+                        listName: Strings.Sites.main.lists.Documents,
                         groupName: Strings.Groups.Visitors,
                         permission: SPTypes.RoleType.Reader
                     },
                     //Configuration list
                     {
-                        listName: Strings.Lists.Configuration,
+                        listName: Strings.Sites.main.lists.Configuration,
                         groupName: Strings.Groups.Admins,
                         permission: SPTypes.RoleType.Administrator
                     },
                     {
-                        listName: Strings.Lists.Configuration,
+                        listName: Strings.Sites.main.lists.Configuration,
                         groupName: Strings.Groups.Contributors,
                         permission: SPTypes.RoleType.Reader
                     },
                     {
-                        listName: Strings.Lists.Configuration,
+                        listName: Strings.Sites.main.lists.Configuration,
                         groupName: Strings.Groups.Visitors,
                         permission: SPTypes.RoleType.Reader
                     },
                     //Contracts list
                     {
-                        listName: Strings.Lists.Contracts,
+                        listName: Strings.Sites.main.lists.Contracts,
                         groupName: Strings.Groups.Admins,
                         permission: SPTypes.RoleType.Administrator
                     },
                     {
-                        listName: Strings.Lists.Contracts,
+                        listName: Strings.Sites.main.lists.Contracts,
                         groupName: Strings.Groups.Contributors,
                         permission: SPTypes.RoleType.Contributor
                     },
                     {
-                        listName: Strings.Lists.Contracts,
+                        listName: Strings.Sites.main.lists.Contracts,
                         groupName: Strings.Groups.Visitors,
                         permission: SPTypes.RoleType.Reader
                     }
@@ -137,25 +138,28 @@ export class Security {
                 onGroupsLoaded: () => {
                     // Set the groups
                     this._admins = this._listSecurity?.getGroup(Strings.Groups.Admins);
-                    this._contributors = this._listSecurity?.getGroup(Strings.Groups.Contributors);                    
+                    this._contributors = this._listSecurity?.getGroup(Strings.Groups.Contributors);
                     this._visitors = this._listSecurity?.getGroup(Strings.Groups.Visitors);
 
-                    // Set the user flags
-                    if (this._listSecurity) {
-                        if (this._listSecurity.isInGroup(ContextInfo.userId, Strings.Groups.Admins)) {
-                            this._isAdmin = true;
-                            this._isContributor = true;
-                            this.RoleDisplay = "Administrator";
-                        } else if (this._listSecurity.isInGroup(ContextInfo.userId, Strings.Groups.Contributors)) {
-                            this._isContributor = true;
-                            this.RoleDisplay = "Contributor";
-                        } else if (this._listSecurity.isInGroup(ContextInfo.userId, Strings.Groups.Visitors)) {
-                            this._isVisitor = true;
-                            this.RoleDisplay = "Visitor";
-                        } else {
-                            this.RoleDisplay = "NoRole";
+                    // Every authenticated person who can view apps is an app user.
+                    this.loadReportPermissions().then(() => {
+                        // Set the user flags
+                        if (this._listSecurity) {
+                            if (this._listSecurity.isInGroup(ContextInfo.userId, Strings.Groups.Admins)) {
+                                this._isAdmin = true;
+                                this._isContributor = true;
+                                this.RoleDisplay = "Administrator";
+                            } else if (this._listSecurity.isInGroup(ContextInfo.userId, Strings.Groups.Contributors)) {
+                                this._isContributor = true;
+                                this.RoleDisplay = "Contributor";
+                            } else if (this._listSecurity.isInGroup(ContextInfo.userId, Strings.Groups.Visitors) || this._canViewCaps) {
+                                this._isVisitor = true;
+                                this.RoleDisplay = "Visitor";
+                            } else {
+                                this.RoleDisplay = "NoRole";
+                            }
                         }
-                    }
+                    }).catch(reject);
 
                     // Ensure the groups exist
                     if (this._admins && this._contributors && this._visitors) {
@@ -165,6 +169,40 @@ export class Security {
                     }
                 }
             });
+        });
+    }
+
+    // check to see if user can view apps list
+    // this is a bypass in case user is in a security or distribution group in the visitor group
+    private static loadReportPermissions(): Promise<void> {
+        return new Promise((resolve) => {
+            const loginName = this._listSecurity?.CurrentUser?.LoginName;
+
+            if (!loginName) {
+                this._canViewCaps = false;
+                resolve();
+                return;
+            }
+
+            Web()
+                .Lists(Strings.Sites.main.lists.Capabilities)
+                .getUserEffectivePermissions(loginName)
+                .execute(
+                    (permissions) => {
+                        this._canViewCaps = Boolean(
+                            permissions &&
+                            Helper.hasPermissions(
+                                permissions.GetUserEffectivePermissions,
+                                SPTypes.BasePermissionTypes.ViewListItems
+                            )
+                        );
+                        resolve();
+                    },
+                    () => {
+                        this._canViewCaps = false;
+                        resolve();
+                    }
+                );
         });
     }
 

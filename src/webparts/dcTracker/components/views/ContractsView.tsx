@@ -13,32 +13,43 @@ interface IContractsListProps {
 
 const renderPerson = (p?: IPeoplePickerExtended): string => p?.Title ?? "";
 
-const renderPeople = (people?: { results: IPeoplePickerExtended[] }): string =>
-  people?.results?.map((p) => p.Title).filter(Boolean).join(", ") ?? "";
-
 export const ContractsList: React.FunctionComponent<IContractsListProps> = ({ contracts, onSelectContract }) => {
   const [searchTerm, setSearchTerm] = React.useState<string>("");
   const [sortColumnKey, setSortColumnKey] = React.useState<string | null>("title");
   const [isSortedDescending, setIsSortedDescending] = React.useState<boolean>(false);
 
+  const uniqueContracts = React.useMemo(() => {
+    const contractMap = new Map<string, IContractItem & { capabilityCount?: number }>();
+
+    for (const contract of contracts) {
+      const key = contract.contractId || contract.customerContractCode || contract.Title || contract.Id.toString();
+      const existing = contractMap.get(key);
+
+      if (existing) {
+        existing.capabilityCount = (existing.capabilityCount ?? 1) + 1;
+      } else {
+        contractMap.set(key, { ...contract, capabilityCount: 1 });
+      }
+    }
+
+    return Array.from(contractMap.values());
+  }, [contracts]);
+
   const filteredContracts = React.useMemo(() => {
     const search = searchTerm.trim().toLowerCase();
-    if (!search) return contracts;
+    if (!search) return uniqueContracts;
 
-    return contracts.filter((contract) => {
+    return uniqueContracts.filter((contract) => {
       return (
         (contract.Title ?? "").toLowerCase().includes(search) ||
         (contract.contractId ?? "").toLowerCase().includes(search) ||
-        (contract.invoice ?? "").toLowerCase().includes(search) ||
         (contract.customerContractCode ?? "").toLowerCase().includes(search) ||
         (contract.customer ?? "").toLowerCase().includes(search) ||
         (contract.contractPm?.Title ?? "").toLowerCase().includes(search) ||
-        (contract.primaryPoc?.Title ?? "").toLowerCase().includes(search) ||
-        renderPeople(contract.stakeholders).toLowerCase().includes(search) ||
         (contract.partner ?? "").toLowerCase().includes(search)
       );
     });
-  }, [contracts, searchTerm]);
+  }, [uniqueContracts, searchTerm]);
 
   const sortedContracts = React.useMemo(() => {
     if (!sortColumnKey) return filteredContracts;
@@ -56,29 +67,21 @@ export const ContractsList: React.FunctionComponent<IContractsListProps> = ({ co
           aVal = (a.contractId || "").toLowerCase();
           bVal = (b.contractId || "").toLowerCase();
           break;
-        case "invoice":
-          aVal = (a.invoice || "").toLowerCase();
-          bVal = (b.invoice || "").toLowerCase();
-          break;
         case "customer":
           aVal = (a.customer || "").toLowerCase();
           bVal = (b.customer || "").toLowerCase();
           break;
-        case "popStart":
-          aVal = a.popStart ? new Date(a.popStart).getTime() : 0;
-          bVal = b.popStart ? new Date(b.popStart).getTime() : 0;
+        case "startDate":
+          aVal = a.startDate ? new Date(a.startDate).getTime() : 0;
+          bVal = b.startDate ? new Date(b.startDate).getTime() : 0;
           break;
-        case "popEnd":
-          aVal = a.popEnd ? new Date(a.popEnd).getTime() : 0;
-          bVal = b.popEnd ? new Date(b.popEnd).getTime() : 0;
+        case "endDate":
+          aVal = a.endDate ? new Date(a.endDate).getTime() : 0;
+          bVal = b.endDate ? new Date(b.endDate).getTime() : 0;
           break;
         case "contractPm":
           aVal = (a.contractPm?.Title || "").toLowerCase();
           bVal = (b.contractPm?.Title || "").toLowerCase();
-          break;
-        case "primaryPoc":
-          aVal = (a.primaryPoc?.Title || "").toLowerCase();
-          bVal = (b.primaryPoc?.Title || "").toLowerCase();
           break;
         default:
           return 0;
@@ -119,16 +122,6 @@ export const ContractsList: React.FunctionComponent<IContractsListProps> = ({ co
       )
     },
     {
-      key: "invoice",
-      name: "Task Order/Invoice ID",
-      fieldName: "invoice",
-      minWidth: 150,
-      maxWidth: 220,
-      isResizable: true,
-      ...sortable("invoice"),
-      onRender: (item: IContractItem) => <Text>{item.invoice || ""}</Text>
-    },
-    {
       key: "customerContractCode",
       name: "Customer Contract Code",
       fieldName: "customerContractCode",
@@ -148,28 +141,28 @@ export const ContractsList: React.FunctionComponent<IContractsListProps> = ({ co
       onRender: (item: IContractItem) => <Text>{item.customer || ""}</Text>
     },
     {
-      key: "popStart",
-      name: "PoP Start",
-      fieldName: "popStart",
+      key: "startDate",
+      name: "Capability Start",
+      fieldName: "startDate",
       minWidth: 110,
       maxWidth: 130,
       isResizable: true,
       headerClassName: styles.centeredHeader,
       className: styles.centeredColumn,
-      ...sortable("popStart"),
-      onRender: (item: IContractItem) => <Text>{item.popStart ? formatDate(item.popStart) : "-"}</Text>
+      ...sortable("startDate"),
+      onRender: (item: IContractItem) => <Text>{item.startDate ? formatDate(item.startDate) : "-"}</Text>
     },
     {
-      key: "popEnd",
-      name: "PoP End",
-      fieldName: "popEnd",
+      key: "endDate",
+      name: "Capability End",
+      fieldName: "endDate",
       minWidth: 110,
       maxWidth: 130,
       isResizable: true,
       headerClassName: styles.centeredHeader,
       className: styles.centeredColumn,
-      ...sortable("popEnd"),
-      onRender: (item: IContractItem) => <Text>{item.popEnd ? formatDate(item.popEnd) : "-"}</Text>
+      ...sortable("endDate"),
+      onRender: (item: IContractItem) => <Text>{item.endDate ? formatDate(item.endDate) : "-"}</Text>
     },
     {
       key: "contractPm",
@@ -182,16 +175,6 @@ export const ContractsList: React.FunctionComponent<IContractsListProps> = ({ co
       onRender: (item: IContractItem) => <Text>{renderPerson(item.contractPm)}</Text>
     },
     {
-      key: "primaryPoc",
-      name: "Capability POC",
-      fieldName: "primaryPoc",
-      minWidth: 160,
-      maxWidth: 220,
-      isResizable: true,
-      ...sortable("primaryPoc"),
-      onRender: (item: IContractItem) => <Text>{renderPerson(item.primaryPoc)}</Text>
-    },
-    {
       key: "partner",
       name: "Partner",
       fieldName: "partner",
@@ -199,13 +182,22 @@ export const ContractsList: React.FunctionComponent<IContractsListProps> = ({ co
       maxWidth: 180,
       isResizable: true,
       onRender: (item: IContractItem) => <Text>{item.partner || ""}</Text>
+    },
+    {
+      key: "capabilityCount",
+      name: "Capabilities",
+      fieldName: "capabilityCount",
+      minWidth: 90,
+      maxWidth: 110,
+      isResizable: false,
+      onRender: (item: IContractItem & { capabilityCount?: number }) => <Text>{item.capabilityCount ?? 1}</Text>
     }
   ];
 
   return (
     <Stack tokens={{ childrenGap: 4 }} styles={{ root: { marginTop: 24 }}}>
       <SearchBox
-        placeholder="Search contract, invoice, customer, POC, stakeholder, or partner..."
+        placeholder="Search contract, customer, PM, or partner..."
         value={searchTerm}
         onChange={(_, newValue) => setSearchTerm(newValue || "")}
         styles={{ root: { width: 460 } }}

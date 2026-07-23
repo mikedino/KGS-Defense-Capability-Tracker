@@ -5,7 +5,7 @@ import Strings from "../common/strings";
 //import { renderRichText } from "./HTMLParser";
 import { formatDate } from "../common/utils";
 
-export interface IApplicationOnePagerProps {
+export interface ICapabilityOnePagerProps {
     capability: ICapabilityItem;
     contract?: IContractItem;
     kgsLogoDataUrl?: string;
@@ -179,7 +179,7 @@ const renderBulletList = (items: string[], textColor?: string): JSX.Element => {
     );
 };
 
-const ApplicationOnePager: React.FC<IApplicationOnePagerProps> = (props) => {
+const CapabilityOnePager: React.FC<ICapabilityOnePagerProps> = (props) => {
     const { capability, contract, kgsLogoDataUrl, screenshotBinary } = props;
 
     const description = (capability.description ?? "").trim();
@@ -244,7 +244,7 @@ const ApplicationOnePager: React.FC<IApplicationOnePagerProps> = (props) => {
 
                         <View style={styles.labelRow}>
                             <Text style={styles.label}>Contract</Text>
-                            <Text style={styles.value}>{contract?.Title ?? capability.contract?.Title ?? "—"}</Text>
+                            <Text style={styles.value}>{contract?.Title ?? "—"}</Text>
                         </View>
                     </View>
 
@@ -282,4 +282,4 @@ const ApplicationOnePager: React.FC<IApplicationOnePagerProps> = (props) => {
     );
 };
 
-export default ApplicationOnePager;
+export default CapabilityOnePager;

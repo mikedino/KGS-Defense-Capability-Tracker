@@ -1,6 +1,7 @@
 import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
 import { ICapabilityItem } from "../common/props";
+import { DataSource } from "../data/ds";
 
 function setHyperlinkCell(cell: ExcelJS.Cell, text: string, href: string): void {
   cell.value = { text, hyperlink: href };
@@ -28,10 +29,16 @@ export async function exportToExcel(capabilities: ICapabilityItem[]): Promise<tr
     { header: "Server Requirements", key: "serverReqmts", width: 28 },
     { header: "Coding Language", key: "codeLanguage", width: 22 },
     { header: "Backend", key: "backend", width: 22 },
-    { header: "Contract", key: "contract", width: 30 }
+    { header: "Contracts", key: "contract", width: 30 }
   ];
 
   capabilities.forEach((cap) => {
+    const relatedContracts = DataSource.Contracts
+      .filter((contract) => contract.capability?.Id === cap.Id)
+      .map((contract) => contract.Title)
+      .filter(Boolean)
+      .join(", ");
+
     const row = worksheet.addRow({
       title: cap.Title ?? "",
       description: cap.description ?? "",
@@ -49,7 +56,7 @@ export async function exportToExcel(capabilities: ICapabilityItem[]): Promise<tr
       serverReqmts: cap.serverReqmts ?? "",
       codeLanguage: cap.codeLanguage ?? "",
       backend: cap.backend ?? "",
-      contract: cap.contract?.Title ?? ""
+      contract: relatedContracts
     });
 
     if (cap.link) {

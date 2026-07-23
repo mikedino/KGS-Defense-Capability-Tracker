@@ -11,7 +11,7 @@ import { WebPartContext } from "@microsoft/sp-webpart-base";
 import { DataSource } from '../data/ds';
 import { ContextInfo, Helper } from 'gd-sprest-bs';
 import { Web } from 'gd-sprest-bs';
-import { DocumentType, ICapabilityItem, IContractItem, IDocumentItem } from "../common/props";
+import { DocumentType, ICapabilityItem, ICapFormSaveResult, IContractItem, IDocumentItem } from "../common/props";
 import styles from '../Dct.module.scss';
 import Strings from '../common/strings';
 import { customPivotStyles } from '../ui/ComponentStyles';
@@ -20,6 +20,7 @@ import { Pill } from '../ui/Pill';
 import { getAtoStatusFill } from '../ui/StatusColors';
 import { CapabilityService } from '../services/CapabilityService';
 import { DocumentService } from '../services/DocumentService';
+import { ContractService } from '../services/ContractService';
 import { CapForm } from '../forms/CapForm';
 import { DocumentForm } from '../forms/DocumentForm';
 import { CapabilityOverview } from './capDetails/CapOverview';
@@ -30,15 +31,15 @@ import { fetchFileDataUrlFromDocumentItem } from '../export/ExportPdfUtils';
 import { exportCapabilityPdf } from '../export/ExportPdfWrapper';
 import { ScreenshotCarousel } from '../ui/ScreenshotCarousel';
 import { AppHeader } from '../ui/AppHeader';
-import { AppRouteTab } from '../routing/routes';
+import { CapRouteTab } from '../routing/routes';
 
-interface AppDetailsProps {
+interface CapDetailsProps {
     capability: ICapabilityItem;
     context: WebPartContext;
     onBack: () => void;
     onHome: () => void;
-    activeTab?: AppRouteTab;
-    onTabChange?: (tab: AppRouteTab) => void;
+    activeTab?: CapRouteTab;
+    onTabChange?: (tab: CapRouteTab) => void;
 }
 
 interface CustomFile extends File {
@@ -57,10 +58,10 @@ const dialogStyles = mergeStyleSets({
 
 export type DocFolderStatus = "unknown" | "ready" | "missing" | "error";
 
-const isAppTab = (v: unknown): v is AppRouteTab =>
+const isCapabilityTab = (v: unknown): v is CapRouteTab =>
     v === "overview" || v === "supporting" || v === "contract" || v === "documentation";
 
-export const AppDetails: React.FC<AppDetailsProps> = ({ capability, context, onBack, onHome, activeTab = "overview", onTabChange }) => {
+export const CapDetails: React.FC<CapDetailsProps> = ({ capability, context, onBack, onHome, activeTab = "overview", onTabChange }) => {
 
     const [capState, setCapState] = useState<ICapabilityItem>(capability);
     const [showCapabilityForm, setShowCapabilityForm] = useState<boolean>(false);
@@ -110,8 +111,8 @@ export const AppDetails: React.FC<AppDetailsProps> = ({ capability, context, onB
             return true;
         } catch (error) {
             const errorMessage = formatError(error);
-            console.error("Error getting App Documents:", errorMessage);
-            setDialogProps("Error getting App Documents:", errorMessage);
+            console.error("Error getting Capability Documents:", errorMessage);
+            setDialogProps("Error getting Capability Documents:", errorMessage);
             return false;
         }
     };
@@ -120,27 +121,11 @@ export const AppDetails: React.FC<AppDetailsProps> = ({ capability, context, onB
         setCapState(capability);
     }, [capability]);
 
-    const contract: IContractItem | undefined = React.useMemo(() => {
-        const cId: number | undefined = capState.contract?.Id;
+    const contracts: IContractItem[] = DataSource.Contracts
+        .filter((contract) => contract.capability?.Id === capState.Id)
+        .sort((a, b) => (a.Title ?? "").localeCompare(b.Title ?? ""));
 
-        if (!cId) {
-            return undefined;
-        }
-
-        return DataSource.Contracts.find((c) => c.Id === cId);
-    }, [capState.contract, capState.contract?.Id]);
-
-    const relatedContractCapabilities: ICapabilityItem[] = React.useMemo(() => {
-        const contractId = capState.contract?.Id;
-        if (!contractId) {
-            return [];
-        }
-
-        return DataSource.Capabilities
-            .filter((cap) => cap.Id !== capState.Id)
-            .filter((cap) => cap.contract?.Id === contractId)
-            .sort((a, b) => a.Title.localeCompare(b.Title));
-    }, [capState.Id, capState.contract?.Id]);
+    const primaryContract: IContractItem | undefined = contracts[0];
 
     useEffect(() => {
         getDocs(capState.Id).catch((error) => {
@@ -177,9 +162,9 @@ export const AppDetails: React.FC<AppDetailsProps> = ({ capability, context, onB
         return new Promise((resolve, reject) => {
             setSpinnerProps("Uploading file...");
 
-            const targetFolderUrl = `${ContextInfo.webServerRelativeUrl}/${Strings.Lists.Documents}/${capability.Id}`;
+            const targetFolderUrl = `${ContextInfo.webServerRelativeUrl}/${Strings.Sites.main.lists.Documents}/${capability.Id}`;
 
-            const list = Web().Lists(Strings.Lists.Documents);
+            const list = Web().Lists(Strings.Sites.main.lists.Documents);
 
             // Upload the file
             // list.RootFolder().Files().add(fileName, true, file.data).execute(
@@ -524,7 +509,7 @@ export const AppDetails: React.FC<AppDetailsProps> = ({ capability, context, onB
                         title="Download"
                         ariaLabel="Download"
                         onClick={() =>
-                            handleDownloadDoc(`${ContextInfo.webAbsoluteUrl}/${Strings.Lists.Documents}/${item.FileLeafRef}`)
+                            handleDownloadDoc(`${ContextInfo.webAbsoluteUrl}/${Strings.Sites.main.lists.Documents}/${item.FileLeafRef}`)
                                 .catch(error => {
                                     const errorMessage = formatError(error);
                                     setDialogProps(`Error Downloading`, errorMessage);
@@ -557,8 +542,8 @@ export const AppDetails: React.FC<AppDetailsProps> = ({ capability, context, onB
     ];
 
     const isPoc = 
-        contract?.primaryPoc?.Id === Security.currentUserID || 
-        contract?.contractPm?.Id === Security.currentUserID || 
+        capState.primaryPoc?.Id === Security.currentUserID ||
+        contracts.some((contract) => contract.contractPm?.Id === Security.currentUserID) || 
         capState.Author?.Id === Security.currentUserID;
     const canViewContract = Security.IsAdmin || isPoc;
     const canEdit = Security.IsAdmin || isPoc;
@@ -627,7 +612,7 @@ export const AppDetails: React.FC<AppDetailsProps> = ({ capability, context, onB
 
                                     await exportCapabilityPdf({
                                         capability: capState,
-                                        contract: contract,
+                                        contract: primaryContract,
                                         kgsLogoDataUrl: Strings.Logo,
                                         fileName: capState.Title,
                                         screenshotBinary
@@ -648,7 +633,7 @@ export const AppDetails: React.FC<AppDetailsProps> = ({ capability, context, onB
                             linkFormat="tabs"
                             onLinkClick={(item) => {
                                 const key = item?.props.itemKey;
-                                onTabChange?.(isAppTab(key) ? key : "overview");
+                                onTabChange?.(isCapabilityTab(key) ? key : "overview");
                             }}
                         >
                             <PivotItem itemKey="overview" headerText="Overview" />
@@ -680,7 +665,7 @@ export const AppDetails: React.FC<AppDetailsProps> = ({ capability, context, onB
                         )}
 
                         {activeTab === "contract" && canViewContract && (
-                            <ContractInfo contract={contract} relatedCapabilities={relatedContractCapabilities} />
+                            <ContractInfo contracts={contracts} />
                         )}
 
                         {activeTab === "documentation" && (
@@ -749,10 +734,12 @@ export const AppDetails: React.FC<AppDetailsProps> = ({ capability, context, onB
                     item={capState}
                     context={context}
                     onCancel={() => setShowCapabilityForm(false)}
-                    onSave={async (capability:ICapabilityItem) => {
+                    onSave={async (result: ICapFormSaveResult) => {
                         try {
                             setSpinnerProps("Editing Capability...");
-                            const updatedCapability = await CapabilityService.edit(capability);
+                            const updatedCapability = await CapabilityService.edit(result.capability);
+                            await ContractService.saveForCapability(updatedCapability.Id, result.contracts, result.deletedContractIds);
+                            await DataSource.init(true, context);
                             setCapState(updatedCapability);
                             setShowCapabilityForm(false);
                             setShowSpinner(false);

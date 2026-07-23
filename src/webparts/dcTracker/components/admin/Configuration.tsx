@@ -1,67 +1,98 @@
 import * as React from "react";
 import {
-    Stack, Text, IColumn, DetailsList, DetailsListLayoutMode, SelectionMode,
-    PrimaryButton, DefaultButton, IconButton, Dialog, DialogType, DialogFooter, TextField, Checkbox,
-    Spinner, SpinnerSize, Nav, INavLinkGroup, DetailsRow, IDetailsRowProps
+    Checkbox,
+    DefaultButton,
+    DetailsList,
+    DetailsListLayoutMode,
+    DetailsRow,
+    Dialog,
+    DialogFooter,
+    DialogType,
+    IColumn,
+    IDetailsRowProps,
+    INavLinkGroup,
+    IconButton,
+    Nav,
+    PrimaryButton,
+    SelectionMode,
+    Spinner,
+    SpinnerSize,
+    Stack,
+    Text,
+    TextField
 } from "@fluentui/react";
 
-import type { IConfigurationItem } from "../common/props";
+import type { ConfigType, IConfigItem } from "../common/props";
 import { ConfigService } from "../services/ConfigService";
 import { formatError } from "../common/utils";
 import { DataSource } from "../data/ds";
 
 interface IConfigManagementProps {
-    onChanged?: (items: IConfigurationItem[]) => void; // optional callback to parent if you want
+    onChanged?: (items: IConfigItem[]) => void;
 }
 
 type DialogMode = "add" | "edit" | "delete" | "error" | undefined;
 
-const knownConfigTypes: { key: string; displayName: string }[] = [
-    { key: "capStatus", displayName: "Capability Status" },
-    { key: "platform", displayName: "Platform" },
-    { key: "hostingEnv", displayName: "Hosting Environment" },
-    { key: "connectivity", displayName: "Connectivity" },
-    { key: "compliance", displayName: "Compliance" },
-    { key: "codeLanguage", displayName: "Coding Language" },
+const knownConfigTypes: { key: ConfigType; displayName: string }[] = [
     { key: "backend", displayName: "Backend" },
+    { key: "capabilityStatus", displayName: "Capability Status" },
+    { key: "codingLanguage", displayName: "Coding Language" },
+    { key: "compliance", displayName: "Compliance" },
+    { key: "connectivity", displayName: "Connectivity" },
     { key: "customer", displayName: "Customer" },
-    { key: "partner", displayName: "Relevant Partner Tag" }
+    { key: "partner", displayName: "Relevant Partner Tag" },
+    { key: "hostingEnvironment", displayName: "Hosting Environment" },
+    { key: "platform", displayName: "Platform" }
 ];
 
-const getForKeys = (items: IConfigurationItem[]): string[] => {
+const getTypeKeys = (items: IConfigItem[]): string[] => {
     const unique = Array.from(new Set([
         ...knownConfigTypes.map(type => type.key),
-        ...items.map(i => (i.isFor ?? "").trim()).filter(Boolean)
+        ...items.map(i => (i.configType ?? "").trim()).filter(Boolean)
     ]));
-    unique.sort((a, b) => a.localeCompare(b));
-    return unique;
+
+    return unique.sort((a, b) => {
+        const aIndex = knownConfigTypes.findIndex(type => type.key === a);
+        const bIndex = knownConfigTypes.findIndex(type => type.key === b);
+
+        if (aIndex >= 0 && bIndex >= 0) return aIndex - bIndex;
+        if (aIndex >= 0) return -1;
+        if (bIndex >= 0) return 1;
+        return a.localeCompare(b);
+    });
 };
 
-export const ConfigManagement: React.FC<IConfigManagementProps> = ({ onChanged }) => {
-    const [allItems, setAllItems] = React.useState<IConfigurationItem[]>([]);
-    const [forKeys, setForKeys] = React.useState<string[]>([]);
-    const [selectedFor, setSelectedFor] = React.useState<string>("");
+const getTypeDisplayName = (key: string): string =>
+    knownConfigTypes.find(type => type.key === key)?.displayName ?? key;
 
+export const ConfigManagement: React.FC<IConfigManagementProps> = ({ onChanged }) => {
+    const [allItems, setAllItems] = React.useState<IConfigItem[]>([]);
+    const [typeKeys, setTypeKeys] = React.useState<string[]>([]);
+    const [selectedType, setSelectedType] = React.useState<string>("");
     const [dialogMode, setDialogMode] = React.useState<DialogMode>(undefined);
     const [dialogTitle, setDialogTitle] = React.useState<string>("");
     const [dialogMessage, setDialogMessage] = React.useState<string>("");
-
     const [busy, setBusy] = React.useState<boolean>(false);
+    const [working, setWorking] = React.useState<IConfigItem | undefined>(undefined);
 
-    // working item in dialog
-    const [working, setWorking] = React.useState<IConfigurationItem | undefined>(undefined);
+    const refreshLocal = React.useCallback((next: IConfigItem[]): void => {
+        const sorted = [...next].sort((a, b) =>
+            (a.configType ?? "").localeCompare(b.configType ?? "")
+            || (a.sortOrder ?? 9999) - (b.sortOrder ?? 9999)
+            || (a.Title ?? "").localeCompare(b.Title ?? "")
+        );
+
+        setAllItems(sorted);
+        const keys = getTypeKeys(sorted);
+        setTypeKeys(keys);
+        setSelectedType(prev => (prev && keys.includes(prev) ? prev : (keys[0] ?? "")));
+        onChanged?.(sorted);
+    }, [onChanged]);
 
     const getConfig = async (): Promise<void> => {
         setBusy(true);
         try {
-            const cItems = await DataSource.getConfig();
-            setAllItems([...cItems ?? []].sort(
-                (a, b) => a.isFor.localeCompare(b.isFor)
-            ));
-
-            const keys = getForKeys(cItems ?? []);
-            setForKeys(keys);
-            setSelectedFor(prev => (prev && keys.includes(prev) ? prev : (keys[0] ?? "")));
+            refreshLocal(await DataSource.getConfig());
         } catch (error) {
             const errorMessage = formatError(error);
             console.error("Error getting Config items:", errorMessage);
@@ -74,74 +105,44 @@ export const ConfigManagement: React.FC<IConfigManagementProps> = ({ onChanged }
     };
 
     React.useEffect(() => {
-        // get config
         getConfig().catch((error) => {
             console.error("Unhandled promise rejection:", error);
         });
     }, []);
 
-    const forDisplayMap = React.useMemo((): Map<string, string> => {
-        const map = new Map<string, string>();
-
-        allItems.forEach((item) => {
-            const key = (item.isFor ?? "").trim();
-            const displayName = (item.isForDisplayName ?? "").trim();
-
-            if (key && !map.has(key)) {
-                map.set(key, displayName || key);
-            }
-        });
-
-        return map;
-    }, [allItems]);
-
-    const getForDisplayName = React.useCallback((key: string): string => {
-        const normalizedKey = (key ?? "").trim();
-        return forDisplayMap.get(normalizedKey)
-            ?? knownConfigTypes.find(type => type.key === normalizedKey)?.displayName
-            ?? key;
-    }, [forDisplayMap]);
-
     const listForSelected = React.useMemo(() => {
-        const key = (selectedFor ?? "").trim();
+        const key = (selectedType ?? "").trim();
         return allItems
-            .filter(i => (i.isFor ?? "").trim() === key)
-            .sort((a, b) => (a.Title ?? "").localeCompare(b.Title ?? ""));
-    }, [allItems, selectedFor]);
-
-    const refreshLocal = (next: IConfigurationItem[]): void => {
-        setAllItems(next);
-        const keys = getForKeys(next);
-        setForKeys(keys);
-        setSelectedFor(prev => (prev && keys.includes(prev) ? prev : (keys[0] ?? "")));
-        onChanged?.(next);
-    };
+            .filter(i => (i.configType ?? "").trim() === key)
+            .sort((a, b) => (a.sortOrder ?? 9999) - (b.sortOrder ?? 9999) || (a.Title ?? "").localeCompare(b.Title ?? ""));
+    }, [allItems, selectedType]);
 
     const openAdd = (): void => {
-        if (!selectedFor) return;
+        if (!selectedType) return;
 
         setWorking({
             Id: 0,
             Title: "",
-            isFor: selectedFor,
-            isForDisplayName: getForDisplayName(selectedFor),
+            configType: selectedType,
+            configValue: "",
+            sortOrder: listForSelected.length + 1,
             isActive: true,
             infoText: ""
         });
 
         setDialogMode("add");
-        setDialogTitle(`Add: ${getForDisplayName(selectedFor)}`);
+        setDialogTitle(`Add: ${getTypeDisplayName(selectedType)}`);
         setDialogMessage("");
     };
 
-    const openEdit = (item: IConfigurationItem): void => {
+    const openEdit = (item: IConfigItem): void => {
         setWorking({ ...item });
         setDialogMode("edit");
         setDialogTitle(`Edit: ${item.Title}`);
         setDialogMessage("");
     };
 
-    const openDelete = (item: IConfigurationItem): void => {
+    const openDelete = (item: IConfigItem): void => {
         setWorking({ ...item });
         setDialogMode("delete");
         setDialogTitle(`Delete: ${item.Title}`);
@@ -155,35 +156,39 @@ export const ConfigManagement: React.FC<IConfigManagementProps> = ({ onChanged }
         setDialogMessage("");
     };
 
+    const validateWorking = (item: IConfigItem): string | undefined => {
+        if (!item.Title?.trim()) return "Display Text is required.";
+        if (!item.configValue?.trim()) return "Saved Value is required.";
+        if (!item.configType?.trim()) return "Config Type is required.";
+        return undefined;
+    };
+
     const onSave = async (): Promise<void> => {
         if (!working) return;
 
         try {
-            setBusy(true);
-
-            if (!working.Title?.trim()) {
-                setDialogMessage("Title is required.");
-                setBusy(false);
+            const validationMessage = validateWorking(working);
+            if (validationMessage) {
+                setDialogMessage(validationMessage);
                 return;
             }
 
-            if (dialogMode === "add") {
-                const created = await ConfigService.create({
-                    ...working,
-                    Title: working.Title.trim(),
-                    isFor: working.isFor.trim()
-                });
+            setBusy(true);
+            const itemToSave: IConfigItem = {
+                ...working,
+                Title: working.Title.trim(),
+                configType: working.configType.trim(),
+                configValue: working.configValue.trim(),
+                infoText: working.infoText?.trim() ?? ""
+            };
 
+            if (dialogMode === "add") {
+                const created = await ConfigService.create(itemToSave);
                 refreshLocal([...allItems, created]);
             }
 
             if (dialogMode === "edit") {
-                const edited = await ConfigService.edit({
-                    ...working,
-                    Title: working.Title.trim(),
-                    isFor: working.isFor.trim()
-                });
-
+                const edited = await ConfigService.edit(itemToSave);
                 refreshLocal(allItems.map(i => (i.Id === edited.Id ? edited : i)));
             }
 
@@ -215,12 +220,12 @@ export const ConfigManagement: React.FC<IConfigManagementProps> = ({ onChanged }
     const columns: IColumn[] = [
         {
             key: "title",
-            name: "Value",
+            name: "Display Text",
             fieldName: "Title",
-            minWidth: 80,
-            maxWidth: 360,
+            minWidth: 100,
+            maxWidth: 300,
             isResizable: true,
-            onRender: (item: IConfigurationItem) => (
+            onRender: (item: IConfigItem) => (
                 <Stack styles={{ root: { whiteSpace: "normal", wordBreak: "break-word" } }}>
                     <Text variant="medium" style={{ fontWeight: 600 }}>{item.Title}</Text>
                     {!!item.infoText && (
@@ -232,13 +237,31 @@ export const ConfigManagement: React.FC<IConfigManagementProps> = ({ onChanged }
             )
         },
         {
+            key: "configValue",
+            name: "Saved Value",
+            fieldName: "configValue",
+            minWidth: 100,
+            maxWidth: 240,
+            isResizable: true,
+            onRender: (item: IConfigItem) => <Text>{item.configValue}</Text>
+        },
+        {
+            key: "sortOrder",
+            name: "Sort",
+            fieldName: "sortOrder",
+            minWidth: 48,
+            maxWidth: 70,
+            isResizable: false,
+            onRender: (item: IConfigItem) => <Text>{item.sortOrder ?? ""}</Text>
+        },
+        {
             key: "isActive",
             name: "Active",
             fieldName: "isActive",
             minWidth: 48,
             maxWidth: 80,
             isResizable: false,
-            onRender: (item: IConfigurationItem) => <Text>{item.isActive ? "Yes" : "No"}</Text>
+            onRender: (item: IConfigItem) => <Text>{item.isActive ? "Yes" : "No"}</Text>
         },
         {
             key: "actions",
@@ -246,7 +269,7 @@ export const ConfigManagement: React.FC<IConfigManagementProps> = ({ onChanged }
             minWidth: 64,
             maxWidth: 90,
             isResizable: false,
-            onRender: (item: IConfigurationItem) => (
+            onRender: (item: IConfigItem) => (
                 <Stack horizontal tokens={{ childrenGap: 6 }}>
                     <IconButton
                         iconProps={{ iconName: "Edit" }}
@@ -267,30 +290,26 @@ export const ConfigManagement: React.FC<IConfigManagementProps> = ({ onChanged }
 
     const navGroups: INavLinkGroup[] = [
         {
-            links: forKeys.map((k) => ({
+            links: typeKeys.map((k) => ({
                 key: k,
-                name: `${getForDisplayName(k)} (${allItems.filter(i => i.isFor === k).length})`,
+                name: `${getTypeDisplayName(k)} (${allItems.filter(i => i.configType === k).length})`,
                 url: "",
-                onClick: () => setSelectedFor(k)
+                onClick: () => setSelectedType(k)
             }))
         }
     ];
 
     return (
         <Stack tokens={{ childrenGap: 16 }} styles={{ root: { width: "100%", marginTop: 24 } }}>
-
-            <Stack horizontalAlign="space-between" verticalAlign="center" >
+            <Stack horizontalAlign="space-between" verticalAlign="center">
                 <Text variant="xLarge">Configuration Management</Text>
-                <Text variant="medium" >Adjust dropdown values within the app</Text>
+                <Text variant="medium">Adjust dropdown values within the app</Text>
             </Stack>
 
-            {/* Left: vertical selector */}
             <Stack horizontal wrap tokens={{ childrenGap: 20 }}>
-
-                {/* LEFT NAV */}
-                <Stack styles={{ root: { flex: "0 1 220px", minWidth: 160 } }}>
+                <Stack styles={{ root: { flex: "0 1 240px", minWidth: 180 } }}>
                     <Nav
-                        selectedKey={selectedFor}
+                        selectedKey={selectedType}
                         groups={navGroups}
                         styles={{
                             root: {
@@ -300,10 +319,9 @@ export const ConfigManagement: React.FC<IConfigManagementProps> = ({ onChanged }
                     />
                 </Stack>
 
-                {/* RIGHT CONTENT */}
                 <Stack grow tokens={{ childrenGap: 12 }} styles={{ root: { minWidth: 0 } }}>
                     <Stack horizontal horizontalAlign="space-between" verticalAlign="center" wrap tokens={{ childrenGap: 12 }}>
-                        <Text variant="xLarge">{getForDisplayName(selectedFor)}</Text>
+                        <Text variant="xLarge">{getTypeDisplayName(selectedType)}</Text>
 
                         <PrimaryButton
                             text="Add Value"
@@ -312,31 +330,26 @@ export const ConfigManagement: React.FC<IConfigManagementProps> = ({ onChanged }
                         />
                     </Stack>
 
-                    <Stack>
-                        <DetailsList
-                            items={listForSelected}
-                            columns={columns}
-                            selectionMode={SelectionMode.none}
-                            layoutMode={DetailsListLayoutMode.fixedColumns}
-                            compact
-                            onRenderRow={(props?: IDetailsRowProps) => props ? (
-                                <DetailsRow
-                                    {...props}
-                                    styles={{
-                                        root: { minHeight: 64 },
-                                        cell: { minHeight: 64, height: "auto" }
-                                    }}
-                                />
-                            ) : null}
-                            onItemInvoked={(item) => openEdit(item as IConfigurationItem)}
-                        />
-                    </Stack>
-
+                    <DetailsList
+                        items={listForSelected}
+                        columns={columns}
+                        selectionMode={SelectionMode.none}
+                        layoutMode={DetailsListLayoutMode.fixedColumns}
+                        compact
+                        onRenderRow={(props?: IDetailsRowProps) => props ? (
+                            <DetailsRow
+                                {...props}
+                                styles={{
+                                    root: { minHeight: 64 },
+                                    cell: { minHeight: 64, height: "auto" }
+                                }}
+                            />
+                        ) : null}
+                        onItemInvoked={(item) => openEdit(item as IConfigItem)}
+                    />
                 </Stack>
-
             </Stack>
 
-            {/* Dialog: Add/Edit */}
             <Dialog
                 hidden={dialogMode !== "add" && dialogMode !== "edit"}
                 onDismiss={closeDialog}
@@ -349,10 +362,27 @@ export const ConfigManagement: React.FC<IConfigManagementProps> = ({ onChanged }
                 {working && (
                     <Stack tokens={{ childrenGap: 12 }}>
                         <TextField
-                            label="Value (Title)"
+                            label="Display Text"
                             value={working.Title ?? ""}
                             onChange={(_, v) => setWorking({ ...working, Title: v ?? "" })}
                             required
+                        />
+
+                        <TextField
+                            label="Saved Value"
+                            value={working.configValue ?? ""}
+                            onChange={(_, v) => setWorking({ ...working, configValue: v ?? "" })}
+                            required
+                        />
+
+                        <TextField
+                            label="Sort Order"
+                            type="number"
+                            value={working.sortOrder !== undefined ? String(working.sortOrder) : ""}
+                            onChange={(_, v) => {
+                                const sortOrder = v ? Number(v) : undefined;
+                                setWorking({ ...working, sortOrder: Number.isFinite(sortOrder) ? sortOrder : undefined });
+                            }}
                         />
 
                         <TextField
@@ -369,16 +399,9 @@ export const ConfigManagement: React.FC<IConfigManagementProps> = ({ onChanged }
                             onChange={(_, checked) => setWorking({ ...working, isActive: !!checked })}
                         />
 
-                        {/* show isFor but don’t let them change it (you can enable if desired) */}
                         <TextField
-                            label="Category (isFor)"
-                            value={working.isFor ?? ""}
-                            disabled
-                        />
-
-                        <TextField
-                            label="Category (Display Name)"
-                            value={getForDisplayName(working.isFor ?? "")}
+                            label="Config Type"
+                            value={working.configType ?? ""}
                             disabled
                         />
                     </Stack>
@@ -390,7 +413,6 @@ export const ConfigManagement: React.FC<IConfigManagementProps> = ({ onChanged }
                 </DialogFooter>
             </Dialog>
 
-            {/* Dialog: Delete */}
             <Dialog
                 hidden={dialogMode !== "delete"}
                 onDismiss={closeDialog}
@@ -406,7 +428,6 @@ export const ConfigManagement: React.FC<IConfigManagementProps> = ({ onChanged }
                 </DialogFooter>
             </Dialog>
 
-            {/* Dialog: ERROR */}
             <Dialog
                 hidden={dialogMode !== "error"}
                 onDismiss={closeDialog}
@@ -421,17 +442,16 @@ export const ConfigManagement: React.FC<IConfigManagementProps> = ({ onChanged }
                 </DialogFooter>
             </Dialog>
 
-            {/* Loading Spinner Dialog */}
             <Dialog
                 hidden={!busy}
-                onDismiss={() => { setBusy(false) }}
+                onDismiss={() => { setBusy(false); }}
                 dialogContentProps={{
                     type: DialogType.normal,
                     title: "Loading...",
-                    closeButtonAriaLabel: 'Close',
+                    closeButtonAriaLabel: "Close"
                 }}
             >
-                <Spinner size={SpinnerSize.large} label={"Working, please wait..."} />
+                <Spinner size={SpinnerSize.large} label="Working, please wait..." />
             </Dialog>
         </Stack>
     );

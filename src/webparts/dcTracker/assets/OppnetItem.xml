@@ -1,0 +1,208 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xml:base="https://koniaggs.sharepoint.com/sites/OppNet/_api/"
+    xmlns="http://www.w3.org/2005/Atom"
+    xmlns:d="http://schemas.microsoft.com/ado/2007/08/dataservices"
+    xmlns:m="http://schemas.microsoft.com/ado/2007/08/dataservices/metadata"
+    xmlns:georss="http://www.georss.org/georss"
+    xmlns:gml="http://www.opengis.net/gml">
+    <id>f4be8a56-8ee0-4382-b997-7403caf8d286</id>
+    <title />
+    <updated>2026-07-23T00:48:56Z</updated>
+    <entry m:etag="&quot;13&quot;">
+        <id>1fa09c97-1c09-422f-b916-95a43fe54875</id>
+        <category term="SP.Data.OpportunitiesListItem" scheme="http://schemas.microsoft.com/ado/2007/08/dataservices/scheme" />
+        <link rel="edit" href="Web/Lists(guid'66d3bed6-2e68-4408-a32d-bc24679de93d')/Items(2539)" />
+        <link rel="http://schemas.microsoft.com/ado/2007/08/dataservices/related/FirstUniqueAncestorSecurableObject" type="application/atom+xml;type=entry" title="FirstUniqueAncestorSecurableObject" href="Web/Lists(guid'66d3bed6-2e68-4408-a32d-bc24679de93d')/Items(2539)/FirstUniqueAncestorSecurableObject" />
+        <link rel="http://schemas.microsoft.com/ado/2007/08/dataservices/related/RoleAssignments" type="application/atom+xml;type=feed" title="RoleAssignments" href="Web/Lists(guid'66d3bed6-2e68-4408-a32d-bc24679de93d')/Items(2539)/RoleAssignments" />
+        <link rel="http://schemas.microsoft.com/ado/2007/08/dataservices/related/AttachmentFiles" type="application/atom+xml;type=feed" title="AttachmentFiles" href="Web/Lists(guid'66d3bed6-2e68-4408-a32d-bc24679de93d')/Items(2539)/AttachmentFiles" />
+        <link rel="http://schemas.microsoft.com/ado/2007/08/dataservices/related/ContentType" type="application/atom+xml;type=entry" title="ContentType" href="Web/Lists(guid'66d3bed6-2e68-4408-a32d-bc24679de93d')/Items(2539)/ContentType" />
+        <link rel="http://schemas.microsoft.com/ado/2007/08/dataservices/related/GetDlpPolicyTip" type="application/atom+xml;type=entry" title="GetDlpPolicyTip" href="Web/Lists(guid'66d3bed6-2e68-4408-a32d-bc24679de93d')/Items(2539)/GetDlpPolicyTip" />
+        <link rel="http://schemas.microsoft.com/ado/2007/08/dataservices/related/FieldValuesAsHtml" type="application/atom+xml;type=entry" title="FieldValuesAsHtml" href="Web/Lists(guid'66d3bed6-2e68-4408-a32d-bc24679de93d')/Items(2539)/FieldValuesAsHtml" />
+        <link rel="http://schemas.microsoft.com/ado/2007/08/dataservices/related/FieldValuesAsText" type="application/atom+xml;type=entry" title="FieldValuesAsText" href="Web/Lists(guid'66d3bed6-2e68-4408-a32d-bc24679de93d')/Items(2539)/FieldValuesAsText" />
+        <link rel="http://schemas.microsoft.com/ado/2007/08/dataservices/related/FieldValuesForEdit" type="application/atom+xml;type=entry" title="FieldValuesForEdit" href="Web/Lists(guid'66d3bed6-2e68-4408-a32d-bc24679de93d')/Items(2539)/FieldValuesForEdit" />
+        <link rel="http://schemas.microsoft.com/ado/2007/08/dataservices/related/File" type="application/atom+xml;type=entry" title="File" href="Web/Lists(guid'66d3bed6-2e68-4408-a32d-bc24679de93d')/Items(2539)/File" />
+        <link rel="http://schemas.microsoft.com/ado/2007/08/dataservices/related/Folder" type="application/atom+xml;type=entry" title="Folder" href="Web/Lists(guid'66d3bed6-2e68-4408-a32d-bc24679de93d')/Items(2539)/Folder" />
+        <link rel="http://schemas.microsoft.com/ado/2007/08/dataservices/related/LikedByInformation" type="application/atom+xml;type=entry" title="LikedByInformation" href="Web/Lists(guid'66d3bed6-2e68-4408-a32d-bc24679de93d')/Items(2539)/LikedByInformation" />
+        <link rel="http://schemas.microsoft.com/ado/2007/08/dataservices/related/ParentList" type="application/atom+xml;type=entry" title="ParentList" href="Web/Lists(guid'66d3bed6-2e68-4408-a32d-bc24679de93d')/Items(2539)/ParentList" />
+        <link rel="http://schemas.microsoft.com/ado/2007/08/dataservices/related/Properties" type="application/atom+xml;type=entry" title="Properties" href="Web/Lists(guid'66d3bed6-2e68-4408-a32d-bc24679de93d')/Items(2539)/Properties" />
+        <link rel="http://schemas.microsoft.com/ado/2007/08/dataservices/related/Versions" type="application/atom+xml;type=feed" title="Versions" href="Web/Lists(guid'66d3bed6-2e68-4408-a32d-bc24679de93d')/Items(2539)/Versions" />
+        <title />
+        <updated>2026-07-23T00:48:56Z</updated>
+        <author>
+            <name />
+        </author>
+        <content type="application/xml">
+            <m:properties>
+                <d:FileSystemObjectType m:type="Edm.Int32">0</d:FileSystemObjectType>
+                <d:Id m:type="Edm.Int32">2539</d:Id>
+                <d:ServerRedirectedEmbedUri m:null="true" />
+                <d:ServerRedirectedEmbedUrl></d:ServerRedirectedEmbedUrl>
+                <d:Title>DHA MTF Transition Consulting/MEO Strategy</d:Title>
+                <d:DescriptionOfScope m:null="true" />
+                <d:RelevantPastPerformance m:null="true" />
+                <d:Customer>DHA</d:Customer>
+                <d:PlaceOfPerformance m:null="true" />
+                <d:PeriodOfPerformance m:null="true" />
+                <d:RFPDate m:type="Edm.DateTime">2020-07-01T07:00:00Z</d:RFPDate>
+                <d:Prime m:type="Edm.Boolean">true</d:Prime>
+                <d:Bidding_x0020_Entity>EHS (Eagle Harbor Solutions)</d:Bidding_x0020_Entity>
+                <d:Operating_x0020_Group>Mission Solutions</d:Operating_x0020_Group>
+                <d:Competition_x0020_Type>8(a) Directed</d:Competition_x0020_Type>
+                <d:Contract_x0020_Vehicle m:null="true" />
+                <d:SubsWorksharePercentage m:null="true" />
+                <d:NAICSSize m:null="true" />
+                <d:NumberOfAwards m:null="true" />
+                <d:KGSIncumbent m:type="Edm.Boolean">false</d:KGSIncumbent>
+                <d:Incumbent>EHS (Eagle Harbor Solutions)</d:Incumbent>
+                <d:External_x0020_Incumbent m:null="true" />
+                <d:EligibleToBid m:type="Edm.Boolean">false</d:EligibleToBid>
+                <d:PerformanceIssues m:null="true" />
+                <d:Contract_x0020_Type>Single Award Contract</d:Contract_x0020_Type>
+                <d:TotalContractValue m:type="Edm.Double">22000000</d:TotalContractValue>
+                <d:KoniagValue m:type="Edm.Double">22000000</d:KoniagValue>
+                <d:NumberOfFTEs m:null="true" />
+                <d:ODCsFacility m:null="true" />
+                <d:Facility_x0020_Clearance m:null="true" />
+                <d:CaptureManagerId m:type="Edm.Int32">17</d:CaptureManagerId>
+                <d:CaptureManagerStringId>17</d:CaptureManagerStringId>
+                <d:ProposalManagerId m:null="true" />
+                <d:ProposalManagerStringId m:null="true" />
+                <d:ContractsManagerId m:null="true" />
+                <d:ContractsManagerStringId m:null="true" />
+                <d:RecruiterId m:null="true" />
+                <d:RecruiterStringId m:null="true" />
+                <d:EntityGMId m:null="true" />
+                <d:EntityGMStringId m:null="true" />
+                <d:HotButtonEvalCriteria m:null="true" />
+                <d:WinStrategySolution m:null="true" />
+                <d:KeyPersonnelPosition m:null="true" />
+                <d:ProposedCandidate m:null="true" />
+                <d:PricingApproverId m:null="true" />
+                <d:PricingApproverStringId m:null="true" />
+                <d:Status>Won</d:Status>
+                <d:PrimaryNAICS m:null="true" />
+                <d:EQCompetitionType m:type="Edm.Boolean">false</d:EQCompetitionType>
+                <d:EQContractVehicle m:type="Edm.Boolean">false</d:EQContractVehicle>
+                <d:EQNSS m:type="Edm.Boolean">false</d:EQNSS>
+                <d:EQFacilityClearance m:type="Edm.Boolean">false</d:EQFacilityClearance>
+                <d:EQCompanyCertifications m:type="Edm.Boolean">false</d:EQCompanyCertifications>
+                <d:EQSizeRecertification m:type="Edm.Boolean">false</d:EQSizeRecertification>
+                <d:EQPerformanceOCI m:type="Edm.Boolean">false</d:EQPerformanceOCI>
+                <d:EQAffiliatePerformance m:type="Edm.Boolean">false</d:EQAffiliatePerformance>
+                <d:RFI m:null="true" />
+                <d:ProposalDeadline m:type="Edm.DateTime">2020-08-01T07:00:00Z</d:ProposalDeadline>
+                <d:Award m:type="Edm.DateTime">2020-09-30T07:00:00Z</d:Award>
+                <d:StartDate m:type="Edm.DateTime">2020-10-01T07:00:00Z</d:StartDate>
+                <d:TopOpp m:type="Edm.Boolean">false</d:TopOpp>
+                <d:PoPMonths m:type="Edm.Double">60</d:PoPMonths>
+                <d:CustomerTier2 m:null="true" />
+                <d:StatusText>Won</d:StatusText>
+                <d:CaptureManagerText>Barshow, Fiona</d:CaptureManagerText>
+                <d:CustomerOutreach m:null="true" />
+                <d:IDIQVehicle m:null="true" />
+                <d:CaptureMgrOriginal>Fiona Barshow (50%), Erin Crean (50%)</d:CaptureMgrOriginal>
+                <d:IncumbentOriginal m:null="true" />
+                <d:RecompeteOriginal m:null="true" />
+                <d:OGOriginal>Mission Solutions</d:OGOriginal>
+                <d:OperationalLeadId m:type="Edm.Int32">24</d:OperationalLeadId>
+                <d:OperationalLeadStringId>24</d:OperationalLeadStringId>
+                <d:BDLeadId m:null="true" />
+                <d:BDLeadStringId m:null="true" />
+                <d:LastBriefedDate m:null="true" />
+                <d:Gate>Gate 1 (Opportunity Overview)</d:Gate>
+                <d:ArchivedStatus m:null="true" />
+                <d:OperationalLeadText>Crean, Erin</d:OperationalLeadText>
+                <d:GateText>Gate 1 (Opportunity Overview)</d:GateText>
+                <d:ArchiveNotes m:null="true" />
+                <d:KGSTopOpp m:type="Edm.Boolean">false</d:KGSTopOpp>
+                <d:AccountStrategy m:null="true" />
+                <d:Notes m:null="true" />
+                <d:NumPrimeAwards m:null="true" />
+                <d:AddedDate m:null="true" />
+                <d:AOPOppClass m:null="true" />
+                <d:Classification m:null="true" />
+                <d:Codename m:null="true" />
+                <d:DescriptionOfWork m:null="true" />
+                <d:EvaluationType m:null="true" />
+                <d:FBOLink m:null="true" />
+                <d:GovWinLink m:null="true" />
+                <d:IDIQCeilingValue m:null="true" />
+                <d:International m:null="true" />
+                <d:LeadSource m:null="true" />
+                <d:PrimarySolution m:null="true" />
+                <d:ReasonWonLost m:null="true" />
+                <d:SolicitationNum m:null="true" />
+                <d:ProgramManager m:null="true" />
+                <d:CaptureDate m:null="true" />
+                <d:ProposalDate m:null="true" />
+                <d:GovWin_x0020_URL m:null="true" />
+                <d:GovTribe_x0020_URL m:null="true" />
+                <d:betaSAM_x0020_URL m:null="true" />
+                <d:Capture_x0020_Site_x0020_URL m:null="true" />
+                <d:Other_x0020_URL m:null="true" />
+                <d:AOP_x0020_Top_x0020_Opp m:type="Edm.Boolean">false</d:AOP_x0020_Top_x0020_Opp>
+                <d:Strategic_x0020_Top_x0020_Opp m:type="Edm.Boolean">false</d:Strategic_x0020_Top_x0020_Opp>
+                <d:Strategic_x0020_Top_x0020_Opp_x0 m:null="true" />
+                <d:KGS_x0020_Solution_x0020_Area m:null="true" />
+                <d:Gate_x0020_Review_x0020_Type>Gate Review 1</d:Gate_x0020_Review_x0020_Type>
+                <d:KGS_x0020_Incumbent_x0020_Entity m:null="true" />
+                <d:Note m:null="true" />
+                <d:Opp_x0020_ID m:null="true" />
+                <d:ScheduleRequirement m:null="true" />
+                <d:SisterSubPast m:null="true" />
+                <d:CreatedChannel m:null="true" />
+                <d:ChannelLink m:null="true" />
+                <d:LOB m:null="true" />
+                <d:ClientName m:null="true" />
+                <d:ClientEmail m:null="true" />
+                <d:ContractPOC m:null="true" />
+                <d:ContractPOCEmail m:null="true" />
+                <d:AddClient m:null="true" />
+                <d:Type_of_Response m:null="true" />
+                <d:Set_Aside_Type m:null="true" />
+                <d:Schedule m:null="true" />
+                <d:What_PP_are_you_using m:null="true" />
+                <d:Prime_Or_SubContract m:null="true" />
+                <d:ctOther m:null="true" />
+                <d:RFI_x0020_Submitted m:null="true" />
+                <d:Duration_x0020_by_x0020_Years m:null="true" />
+                <d:Contract m:null="true" />
+                <d:KGS_Company m:null="true" />
+                <d:KGS_SUb m:null="true" />
+                <d:SubcontractDetail m:null="true" />
+                <d:Certfication_Requirment m:null="true" />
+                <d:Certification m:null="true" />
+                <d:FCLRequirment m:null="true" />
+                <d:UpdatedNote m:null="true" />
+                <d:RecompeteContract m:null="true" />
+                <d:Other_Certification m:null="true" />
+                <d:Estimated_RFQ_Due_Date m:null="true" />
+                <d:Partnership m:null="true" />
+                <d:PercentWinConfidence m:null="true" />
+                <d:TypeOfAgreement m:null="true" />
+                <d:Partners m:type="Collection(SP.Taxonomy.TaxonomyFieldValue)">
+                    <d:element>
+                        <d:Label>Microsoft</d:Label>
+                        <d:TermGuid>2c5e3d3e-7439-4761-af43-53361d3b76b0</d:TermGuid>
+                        <d:WssId m:type="Edm.Int32">1</d:WssId>
+                    </d:element>
+                </d:Partners>
+                <d:ContentTypeId>0x0100EB941459B474964B97CF03C82551C9FC</d:ContentTypeId>
+                <d:ComplianceAssetId m:null="true" />
+                <d:Created m:type="Edm.DateTime">2020-02-25T15:53:17Z</d:Created>
+                <d:Modified m:type="Edm.DateTime">2025-06-27T17:53:42Z</d:Modified>
+                <d:OData__ColorTag m:null="true" />
+                <d:ContractorPurchasingSystem m:null="true" />
+                <d:OrganizationalConflictofInterest m:null="true" />
+                <d:AccreditedPurchasingSystemDetail m:null="true" />
+                <d:ID m:type="Edm.Int32">2539</d:ID>
+                <d:AuthorId m:type="Edm.Int32">13</d:AuthorId>
+                <d:EditorId m:type="Edm.Int32">57</d:EditorId>
+                <d:OData__UIVersionString>13.0</d:OData__UIVersionString>
+                <d:Attachments m:type="Edm.Boolean">false</d:Attachments>
+                <d:GUID m:type="Edm.Guid">18cc657e-3917-4eac-9745-afee578af4f1</d:GUID>
+            </m:properties>
+        </content>
+    </entry>
+    <link rel="next" href="https://koniaggs.sharepoint.com/sites/OppNet/_api/web/lists/getbytitle(%27Opportunities%27)/Items?%24skiptoken=Paged%3dTRUE%26p_ID%3d2539&amp;%24top=1&amp;%24order=Created+desc" />
+</feed>

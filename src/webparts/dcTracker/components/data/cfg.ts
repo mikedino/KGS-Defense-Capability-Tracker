@@ -6,23 +6,35 @@ export const Configuration = Helper.SPConfig({
     ListCfg: [
         {
             ListInformation: {
-                Title: Strings.Lists.Configuration,
+                Title: Strings.Sites.main.lists.Configuration,
                 Description: "*DO NOT DELETE* Library containing configuration for the Defense Capabilities Tracker",
                 BaseTemplate: SPTypes.ListTemplateType.GenericList,
                 OnQuickLaunch: false,
                 Hidden: true
             },
-            TitleFieldDisplayName: "Value",
+            TitleFieldDisplayName: "Display Text",
             CustomFields: [
                 {
-                    name: "isFor",
-                    title: "Is For",
+                    name: "configType",
+                    title: "Config Type",
+                    description: "Configuration category",
                     type: Helper.SPCfgFieldType.Text
                 },
                 {
-                    name: "isForDisplayName",
-                    title: "Is For Display Name",
-                    description: "Friendly name of the configuration type",
+                    name: "configValue",
+                    title: "Config Value",
+                    description: "Compared value/saved value",
+                    type: Helper.SPCfgFieldType.Text
+                },
+                {
+                    name: "sortOrder",
+                    title: "Sort Order",
+                    type: Helper.SPCfgFieldType.Number
+                } as Helper.IFieldInfoNumber,
+                {
+                    name: "infoText",
+                    title: "Informational Text",
+                    description: "Describe the value or purpose (if necessary)",
                     type: Helper.SPCfgFieldType.Text
                 },
                 {
@@ -30,26 +42,20 @@ export const Configuration = Helper.SPConfig({
                     title: "Is Active?",
                     type: Helper.SPCfgFieldType.Boolean,
                     defaultValue: "1",
-                } as Helper.IFieldInfoChoice,
-                {
-                    name: "infoText",
-                    title: "Informational Text",
-                    description: "Describe the value or purpose (if necessary)",
-                    type: Helper.SPCfgFieldType.Text
                 }
             ],
             ViewInformation: [
                 {
                     ViewName: "All Items",
                     Default: true,
-                    ViewQuery: '<OrderBy><FieldRef Name="isFor" Ascending="TRUE"/></OrderBy>',
-                    ViewFields: ['LinkTitle', 'isFor', 'isForDisplayName', 'infoText', 'isActive']
+                    ViewQuery: '<OrderBy><FieldRef Name="configType" Ascending="TRUE"/><FieldRef Name="sortOrder" Ascending="TRUE"/><FieldRef Name="Title" Ascending="TRUE"/></OrderBy>',
+                    ViewFields: ['LinkTitle', 'configType', 'configValue', 'sortOrder', 'infoText', 'isActive']
                 }
             ]
         },
         {
             ListInformation: {
-                Title: Strings.Lists.Contracts,
+                Title: Strings.Sites.main.lists.Contracts,
                 Description: "*DO NOT DELETE* Library containing contract info for the Defense Capabilities Tracker",
                 BaseTemplate: SPTypes.ListTemplateType.GenericList,
                 OnQuickLaunch: false,
@@ -58,16 +64,18 @@ export const Configuration = Helper.SPConfig({
             TitleFieldDisplayName: "Contract Title",
             CustomFields: [
                 {
+                    name: "capability",
+                    title: "Capability",
+                    description: "Capability this contract relationship belongs to",
+                    type: Helper.SPCfgFieldType.Lookup,
+                    listName: Strings.Sites.main.lists.Capabilities,
+                    showField: "Title"
+                } as Helper.IFieldInfoLookup,
+                {
                     name: "contractId",
                     title: "Contract ID",
                     type: Helper.SPCfgFieldType.Text,
                     description: "Lookup: Jamis_Data_API => ContractEndPoint => Contract ID"
-                },
-                {
-                    name: "invoice",
-                    title: "Task Order/Invoice ID",
-                    type: Helper.SPCfgFieldType.Text,
-                    description: "Lookup: Jamis_Data_API => JobEndPoint => Direct Job"
                 },
                 {
                     name: "customerContractCode",
@@ -82,14 +90,14 @@ export const Configuration = Helper.SPConfig({
                     description: "Choices from config list"
                 },
                 {
-                    name: "popStart",
-                    title: "PoP Start Date",
+                    name: "startDate",
+                    title: "Capability Start Date",
                     type: Helper.SPCfgFieldType.Date,
                     format: SPTypes.DateFormat.DateOnly
                 } as Helper.IFieldInfoDate,
                 {
-                    name: "popEnd",
-                    title: "PoP End Date",
+                    name: "endDate",
+                    title: "Capability End Date",
                     type: Helper.SPCfgFieldType.Date,
                     format: SPTypes.DateFormat.DateOnly
                 } as Helper.IFieldInfoDate,
@@ -97,17 +105,6 @@ export const Configuration = Helper.SPConfig({
                     name: "contractPm",
                     title: "KGS Contract Project Manager",
                     type: Helper.SPCfgFieldType.User
-                } as Helper.IFieldInfoUser,
-                {
-                    name: "primaryPoc",
-                    title: "Capability Primary POC",
-                    type: Helper.SPCfgFieldType.User
-                } as Helper.IFieldInfoUser,
-                {
-                    name: "stakeholders",
-                    title: "KGS Stakeholders",
-                    type: Helper.SPCfgFieldType.User,
-                    multi: true
                 } as Helper.IFieldInfoUser,
                 {
                     name: "partner",
@@ -128,15 +125,13 @@ export const Configuration = Helper.SPConfig({
                     ViewQuery: '<OrderBy><FieldRef Name="contractId" Ascending="TRUE"/><FieldRef Name="Title" Ascending="TRUE"/></OrderBy>',
                     ViewFields: [
                         'LinkTitle',
+                        'capability',
                         'contractId',
-                        'invoice',
                         'customerContractCode',
                         'customer',
-                        'popStart',
-                        'popEnd',
+                        'startDate',
+                        'endDate',
                         'contractPm',
-                        'primaryPoc',
-                        'stakeholders',
                         'partner',
                         'infoLink'
                     ]
@@ -145,7 +140,7 @@ export const Configuration = Helper.SPConfig({
         },
         {
             ListInformation: {
-                Title: Strings.Lists.Capabilities,
+                Title: Strings.Sites.main.lists.Capabilities,
                 Description: "*DO NOT DELETE* List to track KGS solutions.",
                 BaseTemplate: SPTypes.ListTemplateType.GenericList,
                 OnQuickLaunch: false,
@@ -250,13 +245,24 @@ export const Configuration = Helper.SPConfig({
                     type: Helper.SPCfgFieldType.Text
                 },
                 {
-                    name: "contract",
-                    title: "Contract",
-                    description: "Choices from lookup list",
-                    type: Helper.SPCfgFieldType.Lookup,
-                    listName: Strings.Lists.Contracts,
-                    showField: "Title"
-                } as Helper.IFieldInfoLookup
+                    name: "primaryPoc",
+                    title: "Capability Primary POC",
+                    type: Helper.SPCfgFieldType.User
+                } as Helper.IFieldInfoUser,
+                {
+                    name: "stakeholders",
+                    title: "KGS Stakeholders",
+                    type: Helper.SPCfgFieldType.User,
+                    multi: true
+                } as Helper.IFieldInfoUser,
+                {
+                    name: "oppNetTagsJson",
+                    title: "OppNet Tags",
+                    description: "JSON-backed selected OppNet tags",
+                    type: Helper.SPCfgFieldType.Note,
+                    noteType: SPTypes.FieldNoteType.TextOnly,
+                    numberOfLines: 6
+                } as Helper.IFieldInfoNote,
             ],
             ViewInformation: [
                 {
@@ -273,14 +279,15 @@ export const Configuration = Helper.SPConfig({
                         "licenseReqd",
                         "codeLanguage",
                         "backend",
-                        "contract"
+                        "primaryPoc",
+                        "stakeholders"
                     ]
                 }
             ]
         },
         {
             ListInformation: {
-                Title: Strings.Lists.Documents,
+                Title: Strings.Sites.main.lists.Documents,
                 Description: "Library containing Defense Capabilities Tracker documentation.",
                 BaseTemplate: SPTypes.ListTemplateType.DocumentLibrary,
                 OnQuickLaunch: false,
@@ -291,8 +298,8 @@ export const Configuration = Helper.SPConfig({
                     name: "capability",
                     title: "Capability",
                     type: Helper.SPCfgFieldType.Lookup,
-                    listName: Strings.Lists.Capabilities,
-                    showField: "Title"
+                    listName: Strings.Sites.main.lists.Capabilities,
+                    showField: "ID"
                 } as Helper.IFieldInfoLookup,
                 {
                     name: "docType",

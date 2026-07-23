@@ -65,7 +65,7 @@ export const fetchFileDataUrlFromDocumentItem = async (
  * @param item - iterations or docs
  * @returns map of grouped items by capability id
  */
-export const groupByApplicationId = <T extends { capability: { Id: number } }>(
+export const groupByCapabilityId = <T extends { capability: { Id: number } }>(
     items: T[]
 ): Map<number, T[]> => {
     const map: Map<number, T[]> = new Map<number, T[]>();
@@ -100,31 +100,22 @@ export const buildPdfBookItems = async (
     screenshotDocs: IDocumentItem[]
 ): Promise<ICapabilityBookItem[]> => {
 
-    // contracts keyed by contract list item Id
-    const contractById: Map<number, IContractItem> = new Map<number, IContractItem>();
-    for (const contract of contracts) {
-        contractById.set(contract.Id, contract);
-    }
-
     // pick 1 screenshot per capability (first one)
-    const screenshotByApplication: Map<number, IDocumentItem> = new Map<number, IDocumentItem>();
+    const screenshotByCapability: Map<number, IDocumentItem> = new Map<number, IDocumentItem>();
     for (const doc of screenshotDocs) {
         const capabilityId: number = doc.capability.Id;
 
-        if (!screenshotByApplication.has(capabilityId)) {
-            screenshotByApplication.set(capabilityId, doc);
+        if (!screenshotByCapability.has(capabilityId)) {
+            screenshotByCapability.set(capabilityId, doc);
         }
     }
 
     const items: ICapabilityBookItem[] = [];
 
     for (const app of capabilities) {
-        const contractId: number | undefined = app.contract?.Id;
-        const contract: IContractItem | undefined = contractId !== undefined
-            ? contractById.get(contractId)
-            : undefined;
+        const contract: IContractItem | undefined = contracts.find((item) => item.capability?.Id === app.Id);
 
-        const screenshotDoc: IDocumentItem | undefined = screenshotByApplication.get(app.Id);
+        const screenshotDoc: IDocumentItem | undefined = screenshotByCapability.get(app.Id);
         let screenshotBinary: string | undefined;
 
         if (screenshotDoc) {

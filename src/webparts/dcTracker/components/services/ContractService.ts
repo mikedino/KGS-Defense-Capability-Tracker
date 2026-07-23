@@ -1,4 +1,4 @@
-import { IContractItem } from "../common/props";
+import { ICapabilityContractDraft, IContractItem } from "../common/props";
 import { DataSource } from "../data/ds";
 import { Web } from "gd-sprest-bs";
 import Strings from "../common/strings";
@@ -6,7 +6,7 @@ import { encodeListName, formatError } from "../common/utils";
 
 export class ContractService {
     private static getListItemType(): string {
-        return `SP.Data.${encodeListName(Strings.Lists.Contracts)}ListItem`;
+        return `SP.Data.${encodeListName(Strings.Sites.main.lists.Contracts)}ListItem`;
     }
 
     private static normalizeDateValue(value?: string): string | null {
@@ -17,22 +17,20 @@ export class ContractService {
         return {
             __metadata: { type: ContractService.getListItemType() },
             Title: item.Title,
+            capabilityId: item.capability?.Id,
             contractId: item.contractId,
-            invoice: item.invoice,
             customerContractCode: item.customerContractCode,
             customer: item.customer,
-            popStart: ContractService.normalizeDateValue(item.popStart),
-            popEnd: ContractService.normalizeDateValue(item.popEnd),
+            startDate: ContractService.normalizeDateValue(item.startDate),
+            endDate: ContractService.normalizeDateValue(item.endDate),
             contractPmId: item.contractPm?.Id ?? null,
-            primaryPocId: item.primaryPoc?.Id ?? null,
-            stakeholdersId: { results: item.stakeholders?.results.map((person) => person.Id) ?? [] },
             partner: item.partner,
             infoLink: item.infoLink
         };
     }
 
     private static loadContractById(itemId: number): IContractItem {
-        const item = Web().Lists(Strings.Lists.Contracts).Items(itemId.toString())
+        const item = Web().Lists(Strings.Sites.main.lists.Contracts).Items(itemId.toString())
             .query({
                 Select: DataSource.contractQuerySelect,
                 Expand: DataSource.contractQueryExpand
@@ -44,7 +42,7 @@ export class ContractService {
 
     static create(item: IContractItem): Promise<IContractItem> {
         return new Promise<IContractItem>((resolve, reject) => {
-            Web().Lists(Strings.Lists.Contracts).Items().add(ContractService.buildPayload(item)).execute(
+            Web().Lists(Strings.Sites.main.lists.Contracts).Items().add(ContractService.buildPayload(item)).execute(
                 (resp) => {
                     if (resp && resp.Id) {
                         resolve(ContractService.loadContractById(resp.Id));
@@ -63,7 +61,7 @@ export class ContractService {
 
     static edit(item: IContractItem): Promise<IContractItem> {
         return new Promise<IContractItem>((resolve, reject) => {
-            Web().Lists(Strings.Lists.Contracts).Items(item.Id).update(ContractService.buildPayload(item)).execute(
+            Web().Lists(Strings.Sites.main.lists.Contracts).Items(item.Id).update(ContractService.buildPayload(item)).execute(
                 (resp) => {
                     if (resp) {
                         resolve(ContractService.loadContractById(item.Id));
@@ -82,7 +80,7 @@ export class ContractService {
 
     static delete(itemId: number): Promise<void> {
         return new Promise<void>((resolve, reject) => {
-            Web().Lists(Strings.Lists.Contracts).Items(itemId).delete().execute(
+            Web().Lists(Strings.Sites.main.lists.Contracts).Items(itemId).delete().execute(
                 () => {
                     console.info(`Deleted Contract ${itemId} !`);
                     resolve();
@@ -93,5 +91,32 @@ export class ContractService {
                 }
             );
         });
+    }
+
+    static async saveForCapability(
+        capabilityId: number,
+        contracts: ICapabilityContractDraft[],
+        deletedContractIds: number[] = []
+    ): Promise<IContractItem[]> {
+        await Promise.all(deletedContractIds.map((itemId) => ContractService.delete(itemId)));
+
+        const savedContracts: IContractItem[] = [];
+        for (const draft of contracts) {
+            const relationship: IContractItem = {
+                ...draft,
+                capability: {
+                    Id: capabilityId,
+                    Title: draft.capability?.Title ?? ""
+                }
+            };
+
+            if (relationship.Id > 0) {
+                savedContracts.push(await ContractService.edit(relationship));
+            } else {
+                savedContracts.push(await ContractService.create(relationship));
+            }
+        }
+
+        return savedContracts;
     }
 }

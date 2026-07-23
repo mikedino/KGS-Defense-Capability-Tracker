@@ -1,12 +1,16 @@
 import * as React from "react";
 import {
+    ComboBox,
     DatePicker,
     DayOfWeek,
     DefaultButton,
+    DirectionalHint,
     Dialog,
     DialogFooter,
     DialogType,
     Dropdown,
+    IComboBox,
+    IComboBoxOption,
     IDropdownOption,
     IPersonaProps,
     PrimaryButton,
@@ -15,23 +19,13 @@ import {
     TextField
 } from "@fluentui/react";
 import { PeoplePicker, PrincipalType } from "@pnp/spfx-controls-react/lib/PeoplePicker";
-import { IPeoplePickerContext } from "@pnp/spfx-controls-react/lib/controls/peoplepicker/IPeoplePickerContext";
 import { WebPartContext } from "@microsoft/sp-webpart-base";
-import { IContractItem } from "../common/props";
+import { IContractEndPointItem, IContractItem } from "../common/props";
 import { DataSource } from "../data/ds";
 import styles from "../Dct.module.scss";
 import { cardStackStyles } from "../ui/ComponentStyles";
 import { Security } from "../services/Security";
-
-const buildOptions = (values: string[]): IDropdownOption[] =>
-    (values ?? []).map((v) => ({ key: v, text: v }));
-
-const onFormatDate = (date?: Date): string => {
-    if (!date) return "";
-    return `${(date.getMonth() + 1).toString().padStart(2, "0")}/` +
-        `${date.getDate().toString().padStart(2, "0")}/` +
-        `${date.getFullYear().toString().slice(-2)}`;
-};
+import { onFormatDate, resolveUserByEmail } from "../common/utils";
 
 export interface IContractFormProps {
     item?: IContractItem;
@@ -41,47 +35,161 @@ export interface IContractFormProps {
     onCancel: () => void;
 }
 
+type JamisLookupField = "contractId" | "Title" | "customerContractCode";
+const maxJamisResults = 20;
+const contractIdControlStyles = { root: { width: 145, flexShrink: 0 } };
+const contractTitleControlStyles = { root: { minWidth: 320, flexGrow: 1 } };
+const contractCodeControlStyles = { root: { width: 230, flexShrink: 0 } };
+
 export const ContractForm: React.FC<IContractFormProps> = ({ item, context, onSave, onDelete, onCancel }) => {
     const [formData, setFormData] = React.useState<IContractItem>({
         Id: item?.Id || 0,
+        capability: item?.capability,
         Title: item?.Title || "",
         contractId: item?.contractId || "",
-        invoice: item?.invoice || "",
         customerContractCode: item?.customerContractCode || "",
         customer: item?.customer || "",
-        popStart: item?.popStart || "",
-        popEnd: item?.popEnd || "",
+        startDate: item?.startDate || "",
+        endDate: item?.endDate || "",
         contractPm: item?.contractPm?.Id ? item.contractPm : undefined,
-        primaryPoc: item?.primaryPoc?.Id ? item.primaryPoc : undefined,
-        stakeholders: { results: item?.stakeholders?.results ?? [] },
         partner: item?.partner || "",
         infoLink: item?.infoLink || ""
     });
     const [showDeleteConfirmation, setShowDeleteConfirmation] = React.useState(false);
+    const [jamisSearchText, setJamisSearchText] = React.useState<Record<JamisLookupField, string>>({
+        contractId: item?.contractId || "",
+        Title: item?.Title || "",
+        customerContractCode: item?.customerContractCode || ""
+    });
 
     type CustomerType = IContractItem["customer"];
     type PartnerType = IContractItem["partner"];
 
-    const customerOptions = React.useMemo(() => buildOptions(DataSource.getConfigValues("customer")), []);
-    const partnerOptions = React.useMemo(() => buildOptions(DataSource.getConfigValues("partner")), []);
+    const customerOptions = React.useMemo<IDropdownOption[]>(() => DataSource.getConfigOptions("customer"), []);
+    const partnerOptions = React.useMemo<IDropdownOption[]>(() => DataSource.getConfigOptions("partner"), []);
+    const jamisContracts = React.useMemo<IContractEndPointItem[]>(() => DataSource.JamisContracts ?? [], []);
 
-    const peoplePickerContext: IPeoplePickerContext = {
-        absoluteUrl: context.pageContext.web.absoluteUrl,
-        msGraphClientFactory: context.msGraphClientFactory,
-        spHttpClient: context.spHttpClient
+    const getJamisValue = (contract: IContractEndPointItem, field: JamisLookupField): string => {
+        switch (field) {
+            case "contractId":
+                return contract.field_19 ?? "";
+            case "Title":
+                return contract.field_20 ?? "";
+            case "customerContractCode":
+                return contract.field_35 ?? "";
+        }
     };
+
+    const getJamisOptions = (field: JamisLookupField): IComboBoxOption[] => {
+        const searchText = (jamisSearchText[field] ?? "").trim().toLowerCase();
+        const matches = searchText
+            ? jamisContracts.filter((contract) => getJamisValue(contract, field).toLowerCase().includes(searchText))
+            : jamisContracts;
+
+        return matches
+            .map((contract): IComboBoxOption => ({
+                key: contract.Id,
+                text: getJamisValue(contract, field),
+                data: contract
+            }))
+            .filter((option) => !!option.text)
+            .sort((a, b) => a.text.localeCompare(b.text))
+            .slice(0, maxJamisResults);
+    };
+
+    const contractIdOptions = React.useMemo<IComboBoxOption[]>(() => getJamisOptions("contractId"), [jamisContracts, jamisSearchText.contractId]);
+    const contractTitleOptions = React.useMemo<IComboBoxOption[]>(() => getJamisOptions("Title"), [jamisContracts, jamisSearchText.Title]);
+    const customerContractCodeOptions = React.useMemo<IComboBoxOption[]>(() => getJamisOptions("customerContractCode"), [jamisContracts, jamisSearchText.customerContractCode]);
 
     const handleChange = <K extends keyof IContractItem>(field: K, value: IContractItem[K]): void => {
         setFormData((prev) => ({ ...prev, [field]: value }));
     };
 
-    const handlePerson = (items: IPersonaProps[], field: "contractPm" | "primaryPoc"): void => {
+    const resolveProjectManager = async (email?: string, fallbackName?: string): Promise<void> => {
+        const user = await resolveUserByEmail(email, fallbackName);
+        if (!user) return;
+
+        setFormData((prev) => ({
+            ...prev,
+            contractPm: user
+        }));
+    };
+
+    const syncJamisContract = (contract: IContractEndPointItem): void => {
+        setFormData((prev) => ({
+            ...prev,
+            contractId: contract.field_19 ?? "",
+            Title: contract.field_20 ?? "",
+            customerContractCode: contract.field_35 ?? ""
+        }));
+        setJamisSearchText({
+            contractId: contract.field_19 ?? "",
+            Title: contract.field_20 ?? "",
+            customerContractCode: contract.field_35 ?? ""
+        });
+
+        resolveProjectManager(contract.field_21, contract.field_23).catch((error) =>
+            console.warn("Unable to set Jamis Contract Project Manager", error)
+        );
+    };
+
+    const handleJamisSelect = (option?: IComboBoxOption): void => {
+        const selectedContract = option?.data as IContractEndPointItem | undefined;
+        if (selectedContract) {
+            syncJamisContract(selectedContract);
+        }
+    };
+
+    const handleJamisInput = (field: JamisLookupField, value: string): void => {
+        setJamisSearchText((prev) => ({ ...prev, [field]: value }));
+        handleChange(field, value as IContractItem[typeof field]);
+    };
+
+    const renderJamisOption = (activeField: JamisLookupField): ((option?: IComboBoxOption) => JSX.Element) => (option?: IComboBoxOption): JSX.Element => {
+        const contract = option?.data as IContractEndPointItem | undefined;
+        const weight = (field: JamisLookupField): 400 | 600 => field === activeField ? 600 : 400;
+        const empty = "-";
+
+        return (
+            <div style={{ display: "block", padding: "8px 10px", lineHeight: 1.25, minHeight: 50 }}>
+                <div style={{ display: "block", fontSize: 12, fontWeight: weight("contractId") }}>
+                    ID: {contract?.field_19 || empty}
+                </div>
+                <div style={{ display: "block", fontSize: 12, fontWeight: weight("Title"), marginTop: 2 }}>
+                    Title: {contract?.field_20 || empty}
+                </div>
+                <div style={{ display: "block", fontSize: 12, fontWeight: weight("customerContractCode"), marginTop: 2 }}>
+                    Code: {contract?.field_35 || empty}
+                </div>
+            </div>
+        );
+    };
+
+    const jamisComboProps = {
+        allowFreeform: true,
+        allowFreeInput: true,
+        autoComplete: "off" as const,
+        openOnKeyboardFocus: true,
+        dropdownWidth: 560,
+        calloutProps: {
+            directionalHint: DirectionalHint.bottomLeftEdge,
+            gapSpace: 4,
+            directionalHintFixed: true
+        },
+        comboBoxOptionStyles: {
+            option: { height: 76, minHeight: 76, padding: 0 },
+            optionText: { display: "block", whiteSpace: "normal" as const, height: "auto", overflow: "visible" as const }
+        },
+        styles: { root: { minWidth: 220, flexGrow: 1 } }
+    };
+
+    const handlePerson = (items: IPersonaProps[]): void => {
         if (!items.length) {
-            handleChange(field, undefined);
+            handleChange("contractPm", undefined);
             return;
         }
 
-        handleChange(field, {
+        handleChange("contractPm", {
             Id: parseInt(items[0].id!, 10),
             EMail: items[0].secondaryText!,
             Title: items[0].text!,
@@ -89,68 +197,72 @@ export const ContractForm: React.FC<IContractFormProps> = ({ item, context, onSa
         });
     };
 
-    const handleStakeholders = (items: IPersonaProps[]): void => {
-        handleChange("stakeholders", {
-            results: (items ?? []).map((p) => ({
-                Id: parseInt(p.id!, 10),
-                EMail: p.secondaryText!,
-                Title: p.text!,
-                JobTitle: p.tertiaryText
-            }))
-        });
-    };
-
     const handleDelete = (): void => onDelete?.(formData.Id);
-    const canEdit = Security.IsAdmin;
+    const canEdit = Security.IsAdmin || Security.IsContributor;
 
     return (
         <Stack tokens={{ childrenGap: 20 }}>
             <Stack styles={{ root: [cardStackStyles.root, { paddingBottom: 24 }] }} tokens={{ childrenGap: 12 }}>
                 <Stack>
                     <Text variant="large">Contract Info</Text>
-                    <Text variant="small">Contract reference fields. Lookup behavior can be wired in later.</Text>
+                    <Text variant="small">Use Contract ID, Contract Title, or Customer Contract Code to find and select a Jamis contract.</Text>
                 </Stack>
 
                 <Stack horizontal wrap tokens={{ childrenGap: 12 }}>
-                    <TextField
+                    <ComboBox
                         label="Contract ID"
                         className={styles.formControl}
-                        value={formData.contractId ?? ""}
+                        selectedKey={undefined}
+                        text={formData.contractId ?? ""}
+                        options={contractIdOptions}
                         disabled={!canEdit}
-                        onChange={(_, val) => handleChange("contractId", val ?? "")}
-                        styles={{ root: { minWidth: 220, flexGrow: 1 } }}
+                        {...jamisComboProps}
+                        onRenderOption={renderJamisOption("contractId")}
+                        onInputValueChange={(value) => handleJamisInput("contractId", value)}
+                        onChange={(
+                            _event: React.FormEvent<IComboBox>,
+                            option?: IComboBoxOption
+                        ) => handleJamisSelect(option)}
+                        styles={contractIdControlStyles}
                     />
 
-                    <TextField
-                        label="Task Order/Invoice ID"
+                    <ComboBox
+                        label="Contract Title"
                         className={styles.formControl}
-                        value={formData.invoice ?? ""}
+                        selectedKey={undefined}
+                        text={formData.Title}
+                        options={contractTitleOptions}
                         disabled={!canEdit}
-                        onChange={(_, val) => handleChange("invoice", val ?? "")}
-                        styles={{ root: { minWidth: 220, flexGrow: 1 } }}
+                        {...jamisComboProps}
+                        onRenderOption={renderJamisOption("Title")}
+                        onInputValueChange={(value) => handleJamisInput("Title", value)}
+                        onChange={(
+                            _event: React.FormEvent<IComboBox>,
+                            option?: IComboBoxOption
+                        ) => handleJamisSelect(option)}
+                        required
+                        styles={contractTitleControlStyles}
+                    />
+
+                    <ComboBox
+                        label="Customer Contract Code"
+                        className={styles.formControl}
+                        selectedKey={undefined}
+                        text={formData.customerContractCode ?? ""}
+                        options={customerContractCodeOptions}
+                        disabled={!canEdit}
+                        {...jamisComboProps}
+                        onRenderOption={renderJamisOption("customerContractCode")}
+                        onInputValueChange={(value) => handleJamisInput("customerContractCode", value)}
+                        onChange={(
+                            _event: React.FormEvent<IComboBox>,
+                            option?: IComboBoxOption
+                        ) => handleJamisSelect(option)}
+                        styles={contractCodeControlStyles}
                     />
                 </Stack>
 
-                <TextField
-                    label="Contract Title"
-                    className={styles.formControl}
-                    value={formData.Title}
-                    disabled={!canEdit}
-                    onChange={(_, val) => handleChange("Title", val ?? "")}
-                    required
-                    maxLength={255}
-                />
-
                 <Stack horizontal wrap tokens={{ childrenGap: 12 }}>
-                    <TextField
-                        label="Customer Contract Code"
-                        className={styles.formControl}
-                        value={formData.customerContractCode ?? ""}
-                        disabled={!canEdit}
-                        onChange={(_, val) => handleChange("customerContractCode", val ?? "")}
-                        styles={{ root: { minWidth: 240, flexGrow: 1 } }}
-                    />
-
                     <Dropdown
                         label="Customer"
                         className={styles.formControl}
@@ -166,24 +278,24 @@ export const ContractForm: React.FC<IContractFormProps> = ({ item, context, onSa
 
                 <Stack horizontal wrap tokens={{ childrenGap: 12 }}>
                     <DatePicker
-                        label="PoP Start Date"
+                        label="Capability Start Date"
                         className={styles.formControl}
                         firstDayOfWeek={DayOfWeek.Sunday}
                         disabled={!canEdit}
-                        value={formData.popStart ? new Date(formData.popStart) : undefined}
-                        onSelectDate={(date) => handleChange("popStart", date ? date.toISOString() : "")}
+                        value={formData.startDate ? new Date(formData.startDate) : undefined}
+                        onSelectDate={(date) => handleChange("startDate", date ? date.toISOString() : "")}
                         allowTextInput
                         formatDate={onFormatDate}
                         styles={{ root: { width: 220 } }}
                     />
 
                     <DatePicker
-                        label="PoP End Date"
+                        label="Capability End Date"
                         className={styles.formControl}
                         firstDayOfWeek={DayOfWeek.Sunday}
                         disabled={!canEdit}
-                        value={formData.popEnd ? new Date(formData.popEnd) : undefined}
-                        onSelectDate={(date) => handleChange("popEnd", date ? date.toISOString() : "")}
+                        value={formData.endDate ? new Date(formData.endDate) : undefined}
+                        onSelectDate={(date) => handleChange("endDate", date ? date.toISOString() : "")}
                         allowTextInput
                         formatDate={onFormatDate}
                         styles={{ root: { width: 220 } }}
@@ -192,7 +304,12 @@ export const ContractForm: React.FC<IContractFormProps> = ({ item, context, onSa
 
                 <Stack horizontal wrap tokens={{ childrenGap: 12 }}>
                     <PeoplePicker
-                        context={peoplePickerContext}
+                        key={`contractPm-${formData.contractPm?.EMail ?? "none"}`}
+                        context={{
+                            absoluteUrl: context.pageContext.web.absoluteUrl,
+                            msGraphClientFactory: context.msGraphClientFactory,
+                            spHttpClient: context.spHttpClient
+                        }}
                         disabled={!canEdit}
                         peoplePickerWPclassName={styles.formControl}
                         defaultSelectedUsers={formData.contractPm?.EMail ? [formData.contractPm.EMail] : []}
@@ -200,46 +317,13 @@ export const ContractForm: React.FC<IContractFormProps> = ({ item, context, onSa
                         personSelectionLimit={1}
                         ensureUser
                         showtooltip
-                        onChange={(items) => handlePerson(items, "contractPm")}
+                        onChange={handlePerson}
                         principalTypes={[PrincipalType.User]}
                         resolveDelay={1000}
                         styles={{ root: { minWidth: 320, flexGrow: 1 } }}
                     />
 
-                    <PeoplePicker
-                        context={peoplePickerContext}
-                        disabled={!canEdit}
-                        peoplePickerWPclassName={styles.formControl}
-                        defaultSelectedUsers={formData.primaryPoc?.EMail ? [formData.primaryPoc.EMail] : []}
-                        titleText="Capability Primary POC"
-                        personSelectionLimit={1}
-                        ensureUser
-                        showtooltip
-                        onChange={(items) => handlePerson(items, "primaryPoc")}
-                        principalTypes={[PrincipalType.User]}
-                        resolveDelay={1000}
-                        styles={{ root: { minWidth: 320, flexGrow: 1 } }}
-                    />
                 </Stack>
-
-                <PeoplePicker
-                    context={peoplePickerContext}
-                    disabled={!canEdit}
-                    peoplePickerWPclassName={styles.formControl}
-                    defaultSelectedUsers={
-                        formData.stakeholders?.results?.length
-                            ? formData.stakeholders.results.map((p) => p.EMail)
-                            : []
-                    }
-                    titleText="KGS Stakeholders"
-                    personSelectionLimit={10}
-                    ensureUser
-                    showtooltip
-                    onChange={handleStakeholders}
-                    principalTypes={[PrincipalType.User]}
-                    resolveDelay={1000}
-                    styles={{ root: { minWidth: 420 } }}
-                />
 
                 <Stack horizontal wrap tokens={{ childrenGap: 12 }}>
                     <Dropdown

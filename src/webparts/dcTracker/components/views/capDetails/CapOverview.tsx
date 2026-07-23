@@ -1,6 +1,7 @@
 import * as React from "react";
 import { Label, Stack, Text } from "@fluentui/react";
 import { ICapabilityItem } from "../../common/props";
+import { DataSource } from "../../data/ds";
 import styles from "../../Dct.module.scss";
 
 export interface ICapabilityOverviewProps {
@@ -24,6 +25,11 @@ const MultilineDisplay: React.FC<{ label: string; value?: string; emptyText?: st
 );
 
 export const CapabilityOverview: React.FC<ICapabilityOverviewProps> = ({ capState, rightContent }) => {
+    const relatedContracts = DataSource.Contracts
+        .filter((contract) => contract.capability?.Id === capState.Id)
+        .map((contract) => contract.Title)
+        .filter(Boolean);
+
     return (
         <Stack tokens={{ childrenGap: 16 }}>
             <Stack horizontal wrap tokens={{ childrenGap: 16 }} className={styles.detailCard}>
@@ -51,8 +57,8 @@ export const CapabilityOverview: React.FC<ICapabilityOverviewProps> = ({ capStat
                         </Stack>
 
                         <Stack style={{ width: 260 }}>
-                            <Label>Contract</Label>
-                            <Text>{capState.contract?.Title || "Not assigned"}</Text>
+                            <Label>Contracts</Label>
+                            <Text>{relatedContracts.length ? relatedContracts.join(", ") : "Not assigned"}</Text>
                         </Stack>
                     </Stack>
 

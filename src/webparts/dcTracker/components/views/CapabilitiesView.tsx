@@ -2,6 +2,7 @@ import * as React from "react";
 import { IColumn, SelectionMode, Stack, Text } from "@fluentui/react";
 import { ICapabilityItem } from "../common/props";
 import { formatDate } from "../common/utils";
+import { DataSource } from "../data/ds";
 import { getAtoStatusFill } from "../ui/StatusColors";
 import { Pill } from "../ui/Pill";
 import PaginatedDetailsList from "../ui/PaginatedDetailsList";
@@ -10,13 +11,13 @@ import styles from "../Dct.module.scss";
 interface ICapabilitiesListProps {
     capabilities: ICapabilityItem[];
     viewMode: string;
-    onSelectApp: (capability: ICapabilityItem) => void;
+    onSelectCap: (capability: ICapabilityItem) => void;
 }
 
-export const AppsList: React.FunctionComponent<ICapabilitiesListProps> = ({
+export const CapabilitiesList: React.FunctionComponent<ICapabilitiesListProps> = ({
     capabilities,
     viewMode,
-    onSelectApp
+    onSelectCap
 }) => {
     const [sortColumnKey, setSortColumnKey] = React.useState<string | null>("title");
     const [isSortedDescending, setIsSortedDescending] = React.useState(false);
@@ -134,12 +135,18 @@ export const AppsList: React.FunctionComponent<ICapabilitiesListProps> = ({
         },
         {
             key: "contract",
-            name: "Contract",
+            name: "Contracts",
             fieldName: "contract",
             minWidth: 140,
             maxWidth: 220,
             isResizable: true,
-            onRender: (item: ICapabilityItem) => <Text>{item.contract?.Title || ""}</Text>
+            onRender: (item: ICapabilityItem) => {
+                const relatedContracts = DataSource.Contracts
+                    .filter((contract) => contract.capability?.Id === item.Id)
+                    .map((contract) => contract.Title)
+                    .filter(Boolean);
+                return <Text>{relatedContracts.join(", ")}</Text>;
+            }
         },
         {
             key: "modified",
@@ -165,7 +172,7 @@ export const AppsList: React.FunctionComponent<ICapabilitiesListProps> = ({
                 selectionMode={SelectionMode.none}
                 layoutMode={1}
                 isHeaderVisible={true}
-                onItemInvoked={(item) => onSelectApp(item as ICapabilityItem)}
+                onItemInvoked={(item) => onSelectCap(item as ICapabilityItem)}
                 pageSizeOptions={[5, 10, 25, 50]}
                 defaultPageSizeOption={10}
                 showFirstLastButtons={true}

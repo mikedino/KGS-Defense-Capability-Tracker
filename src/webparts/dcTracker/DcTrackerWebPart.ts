@@ -39,7 +39,7 @@ export default class DcTrackerWebPart extends BaseClientSideWebPart<IDcTrackerWe
   private _renderError(error: string): void {
     this.domElement.innerHTML = `
       <div class="pad">
-        <h3>${Strings.ProjectName} App</h3>
+        <h3>${Strings.ProjectName} Application</h3>
         <p>This solution requires setup. Please contact your administrator.</p>
         <p>Error Message: ${error}</p>
       </div>`;

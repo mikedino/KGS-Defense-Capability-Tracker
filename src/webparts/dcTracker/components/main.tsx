@@ -9,15 +9,15 @@ import {
 import { DataSource } from './data/ds';
 import { formatError } from './common/utils';
 import Strings from './common/strings';
-import { ICapabilityItem, IContractItem, IDCTrackerProps } from './common/props';
+import { ICapabilityItem, ICapFormSaveResult, IContractItem, IDCTrackerProps } from './common/props';
 import { customPivotStyles } from './ui/ComponentStyles';
-import { AppsList } from './views/CapabilitiesView';
+import { CapabilitiesList } from './views/CapabilitiesView';
 import { CapForm } from './forms/CapForm';
 import { CapabilityService } from './services/CapabilityService';
 import styles from './Dct.module.scss';
 import { AdminPanel } from './admin/AdminPanel';
 import { DocumentService } from './services/DocumentService';
-import { AppDetails } from './views/CapDetails';
+import { CapDetails } from './views/CapDetails';
 import { exportToExcel } from './export/ExportToExcel';
 
 import { ThemeProvider } from "@fluentui/react";
@@ -31,7 +31,7 @@ import { exportCapabilitiesBookPdf } from './export/ExportPdfWrapper';
 import { buildPdfBookItems } from './export/ExportPdfUtils';
 import { AppHeader } from './ui/AppHeader';
 import { HashRouter, useHistory, useLocation } from 'react-router-dom';
-import { AppRouteTab, getPathParts, routes, tabFromSlug } from './routing/routes';
+import { CapRouteTab, getPathParts, routes, tabFromSlug } from './routing/routes';
 
 const DctContent: React.FC<IDCTrackerProps> = (props) => {
   const history = useHistory();
@@ -40,8 +40,8 @@ const DctContent: React.FC<IDCTrackerProps> = (props) => {
   const previousPathRef = React.useRef<string | undefined>(undefined);
 
   const [capabilities, setCapabilities] = useState<ICapabilityItem[]>([]);
-  const [selectedApp, setSelectedApp] = useState<ICapabilityItem | undefined>(undefined);
-  const [showAppForm, setShowAppForm] = useState<boolean>(false);
+  const [selectedCap, setSelectedCap] = useState<ICapabilityItem | undefined>(undefined);
+  const [showCapForm, setShowCapForm] = useState<boolean>(false);
   const [contracts, setContracts] = useState<IContractItem[]>([]);
   const [selectedContract, setSelectedContract] = useState<IContractItem | undefined>(undefined);
   const [showContractForm, setShowContractForm] = useState<boolean>(false);
@@ -53,8 +53,8 @@ const DctContent: React.FC<IDCTrackerProps> = (props) => {
   const [viewMode, setViewMode] = useState<string>("list");
   const [loading, setLoading] = useState<boolean>(true);
 
-  const [selectedPivot, setSelectedPivot] = useState<string>("apps");
-  const [selectedAppTab, setSelectedAppTab] = useState<AppRouteTab>("overview");
+  const [selectedPivot, setSelectedPivot] = useState<string>("caps");
+  const [selectedCapTab, setSelectedCapTab] = useState<CapRouteTab>("overview");
   const [showAdminPanel, setShowAdminPanel] = useState<boolean>(false);
 
   const [showDialog, setShowDialog] = useState(false);
@@ -104,8 +104,8 @@ const DctContent: React.FC<IDCTrackerProps> = (props) => {
     initialize().catch((error) => console.error("Unhandled promise rejection:"));
   }, []);
 
-  const handleSelectedApp = (capItem: ICapabilityItem): void => {
-    history.push(routes.app(capItem.Id, "overview"));
+  const handleSelectedCap = (capItem: ICapabilityItem): void => {
+    history.push(routes.cap(capItem.Id, "overview"));
   }
 
   const handleSelectedContract = (contractItem?: IContractItem): void => {
@@ -113,11 +113,11 @@ const DctContent: React.FC<IDCTrackerProps> = (props) => {
       history.push(routes.contract(contractItem.Id));
     } else {
       setSelectedContract(undefined);
-      setShowContractForm(true);
+      setShowContractForm(false);
     }
   }
 
-  const handleAppDetailsBack = (): void => {
+  const handleCapDetailsBack = (): void => {
     if (previousPathRef.current) {
       history.goBack();
     } else {
@@ -146,28 +146,6 @@ const DctContent: React.FC<IDCTrackerProps> = (props) => {
       );
     });
   }, [capabilities, searchTerm]);
-
-  /**
-   * For Capability Status options:
-   * apply all filters EXCEPT capStatus
-   */
-  const capabilitiesForCapStatusOptions = React.useMemo(() => {
-    return searchFilteredCapabilities.filter((cap) => {
-      const matchesPlatform = platformFilter === "all" || cap.platform === platformFilter;
-      return matchesPlatform;
-    });
-  }, [searchFilteredCapabilities, platformFilter]);
-
-  /**
-   * For Platform options:
-   * apply all filters EXCEPT platform
-   */
-  const capabilitiesForPlatformOptions = React.useMemo(() => {
-    return searchFilteredCapabilities.filter((cap) => {
-      const matchesCapStatus = capStatusFilter === "all" || cap.capStatus === capStatusFilter;
-      return matchesCapStatus;
-    });
-  }, [searchFilteredCapabilities, capStatusFilter]);
 
   /**
    * Final fully filtered capabilities
@@ -212,18 +190,18 @@ const DctContent: React.FC<IDCTrackerProps> = (props) => {
     const parts = getPathParts(location.pathname);
     const section = (parts[0] ?? "").toLowerCase();
 
-    if (!section || section === "home" || section === "capabilitys") {
+    if (!section || section === "home" || section === "capabilities") {
       setShowAdminPanel(false);
-      setSelectedApp(undefined);
+      setSelectedCap(undefined);
       setSelectedContract(undefined);
       setShowContractForm(false);
-      setSelectedPivot("apps");
+      setSelectedPivot("caps");
       return;
     }
 
     if (section === "dashboard") {
       setShowAdminPanel(false);
-      setSelectedApp(undefined);
+      setSelectedCap(undefined);
       setSelectedContract(undefined);
       setShowContractForm(false);
       setSelectedPivot("dashboard");
@@ -231,7 +209,7 @@ const DctContent: React.FC<IDCTrackerProps> = (props) => {
     }
 
     if (section === "admin") {
-      setSelectedApp(undefined);
+      setSelectedCap(undefined);
       setSelectedContract(undefined);
       setShowContractForm(false);
       setShowAdminPanel(true);
@@ -240,7 +218,7 @@ const DctContent: React.FC<IDCTrackerProps> = (props) => {
 
     if (section === "contracts") {
       setShowAdminPanel(false);
-      setSelectedApp(undefined);
+      setSelectedCap(undefined);
       setSelectedPivot("contracts");
 
       const contractId = Number(parts[1]);
@@ -258,23 +236,23 @@ const DctContent: React.FC<IDCTrackerProps> = (props) => {
       return;
     }
 
-    if (section === "apps") {
+    if (section === "caps") {
       setShowAdminPanel(false);
       setShowContractForm(false);
 
-      const appId = Number(parts[1]);
+      const capId = Number(parts[1]);
       const tab = tabFromSlug(parts[2]);
-      setSelectedAppTab(tab);
+      setSelectedCapTab(tab);
 
-      if (Number.isFinite(appId) && appId > 0) {
-        const cap = capabilities.find(a => a.Id === appId);
+      if (Number.isFinite(capId) && capId > 0) {
+        const cap = capabilities.find(a => a.Id === capId);
         if (cap) {
-          setSelectedApp(cap);
+          setSelectedCap(cap);
         } else if (capabilities.length) {
-          setSelectedApp(undefined);
+          setSelectedCap(undefined);
         }
       } else {
-        setSelectedApp(undefined);
+        setSelectedCap(undefined);
       }
     }
   }, [capabilities, contracts, location.pathname]);
@@ -283,37 +261,21 @@ const DctContent: React.FC<IDCTrackerProps> = (props) => {
    * Options for dropdown filters
    */
   const capStatusOptions: IDropdownOption[] = React.useMemo(() => {
-    const statuses = Array.from(
-      new Set(
-        capabilitiesForCapStatusOptions
-          .map((a) => a.capStatus)
-          .filter((s): s is string => Boolean(s))
-      )
-    ).sort((a, b) => a.localeCompare(b));
-
     return [
       { key: "all", text: "All Capability Statuses" },
-      ...statuses.map((s) => ({ key: s, text: s }))
+      ...DataSource.getConfigOptions("capabilityStatus")
     ];
-  }, [capabilitiesForCapStatusOptions]);
+  }, []);
 
   const platformOptions: IDropdownOption[] = React.useMemo(() => {
-    const platforms = Array.from(
-      new Set(
-        capabilitiesForPlatformOptions
-          .map((a) => a.platform)
-          .filter((p): p is string => Boolean(p))
-      )
-    ).sort((a, b) => a.localeCompare(b));
-
     return [
       { key: "all", text: "All Platforms" },
-      ...platforms.map((p) => ({ key: p, text: p }))
+      ...DataSource.getConfigOptions("platform")
     ];
-  }, [capabilitiesForPlatformOptions]);
+  }, []);
 
 
-  const handleExportAppsToExcel = (capabilities: ICapabilityItem[]): void => {
+  const handleExportCapsToExcel = (capabilities: ICapabilityItem[]): void => {
     setSpinnerMessage("Exporting Data Grid...");
     setShowSpinner(true);
     exportToExcel(filteredCapabilities).then(() => {
@@ -380,16 +342,10 @@ const DctContent: React.FC<IDCTrackerProps> = (props) => {
       subMenuProps: {
         items: [
           {
-            key: "newApp",
+            key: "newCap",
             text: "New Capability",
             title: "Create a new Capability",
-            onClick: () => { setShowAppForm(true); }
-          },
-          {
-            key: "newContract",
-            text: "New Contract",
-            title: "Create a new Contract",
-            onClick: () => { setShowContractForm(true); }
+            onClick: () => { setShowCapForm(true); }
           }
         ],
       },
@@ -415,7 +371,7 @@ const DctContent: React.FC<IDCTrackerProps> = (props) => {
             text: "Export to Excel",
             title: "Export current (filtered) data set to a local Excel document",
             iconProps: { iconName: "ExcelDocument" },
-              onClick: () => handleExportAppsToExcel(filteredCapabilities)
+              onClick: () => handleExportCapsToExcel(filteredCapabilities)
           },
           {
             key: "exportPdf",
@@ -509,13 +465,13 @@ const DctContent: React.FC<IDCTrackerProps> = (props) => {
   return (
     <ThemeProvider theme={appTheme}>
       <div className={styles.dcTracker}>
-        {selectedApp ? (
-          <AppDetails
-            capability={selectedApp}
-            onBack={handleAppDetailsBack}
+        {selectedCap ? (
+          <CapDetails
+            capability={selectedCap}
+            onBack={handleCapDetailsBack}
             onHome={() => history.push(routes.home)}
-            activeTab={selectedAppTab}
-            onTabChange={(tab) => history.push(routes.app(selectedApp.Id, tab))}
+            activeTab={selectedCapTab}
+            onTabChange={(tab) => history.push(routes.cap(selectedCap.Id, tab))}
             context={props.context}
           />
         ) : (
@@ -531,7 +487,7 @@ const DctContent: React.FC<IDCTrackerProps> = (props) => {
                   onLinkClick={(item) => {
                     if (!item) return;
                     const key = item?.props.itemKey;
-                    if (key === "apps") {
+                    if (key === "caps") {
                       history.push(routes.capabilities);
                       handleRefreshClick();
                     } else if (key === "contracts") {
@@ -546,7 +502,7 @@ const DctContent: React.FC<IDCTrackerProps> = (props) => {
                     headerText="Capabilities"
                     title="View all Capabilities"
                     ariaLabel="View all Capabilities"
-                    itemKey="apps"
+                    itemKey="caps"
                     itemIcon="ProductCatalog"
                   />
                   <PivotItem
@@ -575,7 +531,7 @@ const DctContent: React.FC<IDCTrackerProps> = (props) => {
             {/* Main Content */}
             <div className={styles.pageContent}>
 
-              {selectedPivot === "apps" && (
+              {selectedPivot === "caps" && (
                 <Stack tokens={{ childrenGap: 15 }} styles={{ root: { marginTop: 20, marginBottom: 20 } }}>
                   {/* Filters */}
                   <Stack horizontal tokens={{ childrenGap: 10 }} wrap verticalAlign='center'>
@@ -635,7 +591,7 @@ const DctContent: React.FC<IDCTrackerProps> = (props) => {
                     </Stack>
                   </Stack>
 
-                  {loading ? null : <AppsList capabilities={filteredCapabilities} viewMode={viewMode} onSelectApp={handleSelectedApp} />}
+                  {loading ? null : <CapabilitiesList capabilities={filteredCapabilities} viewMode={viewMode} onSelectCap={handleSelectedCap} />}
 
                 </Stack>
               )}
@@ -653,8 +609,8 @@ const DctContent: React.FC<IDCTrackerProps> = (props) => {
 
         {/* Capability Form Dialog */}
         <Dialog
-          hidden={!showAppForm}
-          onDismiss={() => setShowAppForm(false)}
+          hidden={!showCapForm}
+          onDismiss={() => setShowCapForm(false)}
           dialogContentProps={{
             type: DialogType.largeHeader,
             title: `Create New Capability`,
@@ -666,16 +622,17 @@ const DctContent: React.FC<IDCTrackerProps> = (props) => {
           }}
         >
           <CapForm
-            item={selectedApp}
+            item={selectedCap}
             context={props.context}
-            onCancel={() => setShowAppForm(false)}
-            onSave={async (item) => {
-              setSpinnerMessage("Creating Cap Entry...");
+            onCancel={() => setShowCapForm(false)}
+            onSave={async (result: ICapFormSaveResult) => {
+              setSpinnerMessage("Creating new Capacity...");
               setShowSpinner(true);
               try {
-                const appResponse = await CapabilityService.create(item)
+                const capResponse = await CapabilityService.create(result.capability)
                 //create folder for related docs
-                await DocumentService.createCapabilityFolder(appResponse.Id);
+                await DocumentService.createCapabilityFolder(capResponse.Id);
+                await ContractService.saveForCapability(capResponse.Id, result.contracts, result.deletedContractIds);
 
                 setSpinnerMessage("Refreshing data...");
 
@@ -683,10 +640,10 @@ const DctContent: React.FC<IDCTrackerProps> = (props) => {
 
                 setDialogProps("Success!", "You successfully created a new Capability!");
 
-                setSelectedApp(appResponse);
-                setShowAppForm(false);
+                setSelectedCap(capResponse);
+                setShowCapForm(false);
                 setShowSpinner(false);
-                history.push(routes.app(appResponse.Id, "overview"));
+                history.push(routes.cap(capResponse.Id, "overview"));
 
               } catch (error) {
                 const fError = formatError(error);
@@ -697,14 +654,17 @@ const DctContent: React.FC<IDCTrackerProps> = (props) => {
               }
             }}
             onDelete={async () => {
-              if (selectedApp) {
+              if (selectedCap) {
                 setSpinnerMessage("Deleting Capability Entry...");
                 setShowSpinner(true);
                 try {
-                  await CapabilityService.delete(selectedApp.Id)
-                  setContracts((prevApps) => prevApps.filter(a => a.Id !== selectedApp.Id));
-                  setSelectedApp(undefined);
-                  setShowAppForm(false);
+                  const relatedContracts = contracts.filter((contract) => contract.capability?.Id === selectedCap.Id);
+                  await Promise.all(relatedContracts.map((contract) => ContractService.delete(contract.Id)));
+                  await CapabilityService.delete(selectedCap.Id)
+                  setCapabilities((prevCaps) => prevCaps.filter(a => a.Id !== selectedCap.Id));
+                  setContracts((prevContracts) => prevContracts.filter(c => c.capability?.Id !== selectedCap.Id));
+                  setSelectedCap(undefined);
+                  setShowCapForm(false);
                   history.push(routes.capabilities);
                 } catch (error) {
                   const fError = formatError(error);
@@ -714,7 +674,7 @@ const DctContent: React.FC<IDCTrackerProps> = (props) => {
                   setShowSpinner(false);
                 }
               } else {
-                setDialogProps("No App selected", "No App was selected. Please try again.")
+                setDialogProps("No Capability selected", "No Capability was selected. Please try again.")
                 return;
               }
             }}
@@ -728,7 +688,7 @@ const DctContent: React.FC<IDCTrackerProps> = (props) => {
           onDismiss={closeContractForm}
           dialogContentProps={{
             type: DialogType.largeHeader,
-            title: selectedContract ? "Edit Contract" : "Create New Contract",
+            title: "Edit Contract",
             showCloseButton: true
           }}
           modalProps={{
@@ -761,22 +721,7 @@ const DctContent: React.FC<IDCTrackerProps> = (props) => {
                 }
 
               } else {
-                //new contract
-                setSpinnerMessage("Creating New Contract...");
-                setShowSpinner(true);
-
-                try {
-                  const newContract = await ContractService.create(item);
-                  setSpinnerMessage("Refreshing data...");
-                  //add new Contract to state
-                  setContracts((prevContracts) => [...prevContracts, newContract]);
-                  closeContractForm();
-                  setShowSpinner(false);
-                } catch (err) {
-                  console.error(`Error creating Contract: ${formatError(err)}`);
-                  setShowSpinner(false);
-                  setDialogProps("Error creating Contract", formatError(err));
-                }
+                setDialogProps("No Contract selected", "Contracts must be added from a Capability first.");
               }
             }}
             onDelete={async () => {
