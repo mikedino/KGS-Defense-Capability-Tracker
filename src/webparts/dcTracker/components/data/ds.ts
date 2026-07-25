@@ -1,7 +1,7 @@
 import { Web } from "gd-sprest-bs";
 import { WebPartContext } from '@microsoft/sp-webpart-base';
 import Strings, { setContext } from "../common/strings";
-import { ConfigType, ICapabilityItem, IConfigItem, IContractEndPointItem, IContractItem, IDocumentItem, IOpportunityItem } from "../common/props";
+import { ConfigType, ICapabilityItem, IConfigItem, IContractEndPointItem, IContractItem, IDocumentItem, IOpportunityItem, IPastPerformanceItem, IProposalItem } from "../common/props";
 import { formatError } from "../common/utils";
 import { ConfigService } from "../services/ConfigService";
 import { parseJsonTagField } from "../common/tagUtils";
@@ -36,7 +36,7 @@ export class DataSource {
                 await Promise.all([
                     this.getContracts(),
                     this.getCapabilities(),
-                    this.getJamisContracts()
+                    this._jamisContractsLoaded ? Promise.resolve(this._jamisContracts) : this.getJamisContracts()
                 ]);
             }).then(() => {
                 this.initialized = true;
@@ -180,7 +180,7 @@ export class DataSource {
         "Id", "Title", "description", "capabilities", "link", "capStatus", "notes",
         "platform", "hostingEnv", "connectivity", "compliance", "licenseReqd",
         "licenseReqmts", "extensibility", "serverReqmts", "codeLanguage", "backend",
-        "oppNetTagsJson", "Modified",
+        "oppNetTagsJson", "pastPerformanceTagsJson", "proposalTagsJson", "Modified",
         "primaryPoc/Id", "primaryPoc/Title", "primaryPoc/EMail", "primaryPoc/JobTitle", "primaryPoc/Department",
         "stakeholders/Id", "stakeholders/Title", "stakeholders/EMail", "stakeholders/JobTitle", "stakeholders/Department",
         "Author/Title", "Author/EMail", "Author/Id"
@@ -206,7 +206,9 @@ export class DataSource {
                     if (items?.results?.length) {
                         this._capabilities = (items.results as unknown as ICapabilityItem[]).map((item) => ({
                             ...item,
-                            oppNetTags: parseJsonTagField(item.oppNetTagsJson)
+                            oppNetTags: parseJsonTagField(item.oppNetTagsJson),
+                            pastPerformanceTags: parseJsonTagField(item.pastPerformanceTagsJson),
+                            proposalTags: parseJsonTagField(item.proposalTagsJson)
                         }));
                         resolve(this._capabilities);
                     } else {
@@ -280,6 +282,7 @@ export class DataSource {
 
     //GET CONTRACTS FROM JAMIS ENDPOINT
     private static _jamisContracts: IContractEndPointItem[] = [];
+    private static _jamisContractsLoaded: boolean = false;
     static get JamisContracts(): IContractEndPointItem[] { return this._jamisContracts; }
     static getJamisContracts(): Promise<IContractEndPointItem[]> {
         return new Promise<IContractEndPointItem[]>((resolve, reject) => {
@@ -293,14 +296,13 @@ export class DataSource {
                 .Items()
                 .query({
                     GetAllItems: true,
-                    OrderBy: ["field_20"],
-                    Select: [
-                        "Id", "Title", "field_19", "field_20", "field_35", "field_21", "field_23"
-                    ]
+                    Select: ["Id", "Title", "field_19", "field_20", "field_35", "field_21", "field_23"],
+                    OrderBy: ["field_20"]
                 })
                 .execute(
                     (items) => {
                         this._jamisContracts = (items?.results ?? []) as unknown as IContractEndPointItem[];
+                        this._jamisContractsLoaded = true;
                         resolve(this._jamisContracts);
                     },
                     (error) => reject(new Error(`Error fetching Jamis Contracts: ${formatError(error)}`))
@@ -313,18 +315,15 @@ export class DataSource {
     static get Opportunities(): IOpportunityItem[] { return this._opportunities; }
     static getOpportunities(): Promise<IOpportunityItem[]> {
         return new Promise<IOpportunityItem[]>((resolve, reject) => {
-            this._opportunities = [];
-
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-
             Web(Strings.Sites.oppNet.url)
                 .Lists(Strings.Sites.oppNet.lists.Opportunities)
                 .Items()
                 .query({
-                    GetAllItems: true,
+                    //GetAllItems: true,
+                    Select: ["Id", "Title", "Customer", "Status"],
                     OrderBy: ["Title"],
-                    Select: ["Id", "Title", "Customer", "Status"]
+                    Filter: "Status eq 'Won'", //only show opps where we won the opp
+                    Top: 5000
                 })
                 .execute(
                     (items) => {
@@ -332,6 +331,55 @@ export class DataSource {
                         resolve(this._opportunities);
                     },
                     (error) => reject(new Error(`Error fetching Opportunities: ${formatError(error)}`))
+                );
+        });
+    }
+
+    //GET PAST PERFORMANCE FROM PROPOSAL SITE
+    private static _pastPerformance: IPastPerformanceItem[] = [];
+    static get PastPerformance(): IPastPerformanceItem[] { return this._pastPerformance; }
+    static getPastPerformance(): Promise<IPastPerformanceItem[]> {
+        return new Promise<IPastPerformanceItem[]>((resolve, reject) => {
+            Web(Strings.Sites.proposals.url)
+                .Lists(Strings.Sites.proposals.lists.PastPerformance)
+                .Items()
+                .query({
+                    //GetAllItems: true,
+                    Select: ["Id", "Contract_x0023_", "Customer_x0020_Agency", "Doc_x0020_Type", "Capability_x0020_Area"],
+                    OrderBy: ["Title"],
+                    Top: 5000
+                })
+                .execute(
+                    (items) => {
+                        this._pastPerformance = (items?.results ?? []) as unknown as IPastPerformanceItem[];
+                        resolve(this._pastPerformance);
+                    },
+                    (error) => reject(new Error(`Error fetching Past Performance: ${formatError(error)}`))
+                );
+        });
+    }
+
+    //GET PROPOSALS FROM PROPOSAL SITE
+    private static _proposals: IProposalItem[] = [];
+    static get Proposals(): IProposalItem[] { return this._proposals; }
+    static getProposals(): Promise<IProposalItem[]> {
+        return new Promise<IProposalItem[]>((resolve, reject) => {
+            Web(Strings.Sites.proposals.url)
+                .Lists(Strings.Sites.proposals.lists.Proposals)
+                .Items()
+                .query({
+                    //GetAllItems: true,
+                    Select: ["Id", "Title", "OpportunityStage", "TypeOfOpportunity", "Entity"],
+                    OrderBy: ["Title"],
+                    Filter: "OpportunityStage eq 'Awarded (won)'", //only show proposals where we won the contract
+                    Top: 5000
+                })
+                .execute(
+                    (items) => {
+                        this._proposals = (items?.results ?? []) as unknown as IProposalItem[];
+                        resolve(this._proposals);
+                    },
+                    (error) => reject(new Error(`Error fetching Proposals: ${formatError(error)}`))
                 );
         });
     }

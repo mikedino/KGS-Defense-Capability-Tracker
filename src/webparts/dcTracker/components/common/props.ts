@@ -66,7 +66,11 @@ export interface ICapabilityItem {
 
     /* TAGS */
     oppNetTagsJson?: string;
-    oppNetTags?: IOppNetTagValue[];
+    oppNetTags?: IOpportunityItem[];
+    pastPerformanceTagsJson?: string;
+    pastPerformanceTags?: IPastPerformanceItem[];
+    proposalTagsJson?: string;
+    proposalTags?: IProposalItem[];
 }
 
 export interface IContractItem {
@@ -136,12 +140,23 @@ export interface IOpportunityItem {
     Title?: string;
     Customer?: string;
     Status?: string;
+    url?: string;
 }
 
-export interface IOppNetTagValue {
-    id: number;
-    title: string;
-    customer?: string;
-    status?: string;
+export interface IPastPerformanceItem {
+    readonly Id: number;
+    Contract_x0023_?: string; //Contract #
+    Customer_x0020_Agency?: string; //Customer Agency
+    Doc_x0020_Type?: string;
+    Capability_x0020_Area?: { results: string[] }; //multi-choice field
+    url?: string;
+}
+
+export interface IProposalItem {
+    readonly Id: number;
+    Title: string;
+    OpportunityStage?: string;
+    TypeOfOpportunity?: string;
+    Entity?: string;
     url?: string;
 }

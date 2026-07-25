@@ -332,24 +332,11 @@ const DctContent: React.FC<IDCTrackerProps> = (props) => {
     });
   };
 
+  const handleNewCapabilityClick = (): void => {
+    setShowCapForm(true);
+  };
+
   const commandBarItems: ICommandBarItemProps[] = [
-    {
-      key: "newItem",
-      text: "New",
-      title: "Create a new Record",
-      iconProps: { iconName: "Add" },
-      disabled: Security.IsVisitor,
-      subMenuProps: {
-        items: [
-          {
-            key: "newCap",
-            text: "New Capability",
-            title: "Create a new Capability",
-            onClick: () => { setShowCapForm(true); }
-          }
-        ],
-      },
-    },
     {
       key: "admin",
       text: "Admin",
@@ -446,38 +433,34 @@ const DctContent: React.FC<IDCTrackerProps> = (props) => {
     )
   }
 
-  if (showAdminPanel) {
-    return (
-      <div className={styles.dcTracker}>
-        <AdminPanel
-          context={props.context}
-          onBack={() => {
-            history.push(routes.home);
-            initDatasource(true).catch((error) =>
-              console.error(`Error refreshing datasource: ${formatError(error)}`)
-            )
-          }}
-        />
-      </div>
-    )
-  }
-
   return (
     <ThemeProvider theme={appTheme}>
       <div className={styles.dcTracker}>
-        {selectedCap ? (
+        {showAdminPanel ? (
+          <AdminPanel
+            context={props.context}
+            onNewCapability={handleNewCapabilityClick}
+            onBack={() => {
+              history.push(routes.home);
+              initDatasource(true).catch((error) =>
+                console.error(`Error refreshing datasource: ${formatError(error)}`)
+              )
+            }}
+          />
+        ) : selectedCap ? (
           <CapDetails
             capability={selectedCap}
             onBack={handleCapDetailsBack}
             onHome={() => history.push(routes.home)}
             activeTab={selectedCapTab}
             onTabChange={(tab) => history.push(routes.cap(selectedCap.Id, tab))}
+            onNewCapability={handleNewCapabilityClick}
             context={props.context}
           />
         ) : (
           <Stack>
             {/* Header */}
-            <AppHeader />
+            <AppHeader onNewCapability={handleNewCapabilityClick} />
 
             <div className={styles.mainNavBar}>
               <div className={styles.mainNavTabs}>
@@ -622,7 +605,6 @@ const DctContent: React.FC<IDCTrackerProps> = (props) => {
           }}
         >
           <CapForm
-            item={selectedCap}
             context={props.context}
             onCancel={() => setShowCapForm(false)}
             onSave={async (result: ICapFormSaveResult) => {
@@ -776,7 +758,7 @@ const DctContent: React.FC<IDCTrackerProps> = (props) => {
           <Spinner size={SpinnerSize.large} label={spinnerMessage} />
         </Dialog>
 
-        <Stack horizontalAlign='end' style={{ paddingTop: 10 }}>
+        <Stack horizontalAlign='end' style={{ maxWidth: 1600 }}>
           <Text variant='xSmall'>Tracker Version: {Strings.Version}</Text>
         </Stack>
 

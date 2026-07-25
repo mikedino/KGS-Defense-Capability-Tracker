@@ -11,14 +11,15 @@ import { AppHeader } from "../ui/AppHeader"
 interface IAdminPanelProps {
     context: WebPartContext
     onBack: () => void
+    onNewCapability?: () => void
 }
 
-export const AdminPanel: React.FunctionComponent<IAdminPanelProps> = ({ context, onBack }) => {
+export const AdminPanel: React.FunctionComponent<IAdminPanelProps> = ({ context, onBack, onNewCapability }) => {
     const [selectedTab, setSelectedTab] = useState<string>("personnel");
 
     return (
         <Stack>
-            <AppHeader />
+            <AppHeader onNewCapability={onNewCapability} />
 
             <Stack tokens={{ childrenGap: 20 }} className={styles.pageContent}>
                 <Stack horizontalAlign="start">

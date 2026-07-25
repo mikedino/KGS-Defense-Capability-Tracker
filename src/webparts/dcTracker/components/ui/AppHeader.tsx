@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Icon, IconButton, Stack, Text } from "@fluentui/react";
+import { PrimaryButton, Icon, IconButton, Stack, Text } from "@fluentui/react";
 import { useHistory } from "react-router-dom";
 import Strings from "../common/strings";
 import styles from "../Dct.module.scss";
@@ -8,7 +8,11 @@ import { routes } from "../routing/routes";
 
 const webViewPreferenceKey = "KGSDCTracker.WebView";
 
-export const AppHeader: React.FC = () => {
+interface IAppHeaderProps {
+    onNewCapability?: () => void;
+}
+
+export const AppHeader: React.FC<IAppHeaderProps> = ({ onNewCapability }) => {
     const history = useHistory();
 
     const isWebView = React.useMemo(() => {
@@ -44,16 +48,29 @@ export const AppHeader: React.FC = () => {
                     {Strings.ProjectName}
                 </Text>
             </Stack>
-            <Stack horizontal verticalAlign="center" tokens={{ childrenGap: 12 }}>
-                <IconButton
-                    className={styles.headerIconButton}
-                    iconProps={{ iconName: isWebView ? "BackToWindow" : "OpenInNewWindow" }}
-                    title={isWebView ? "Exit WebView" : "Open in WebView"}
-                    ariaLabel={isWebView ? "Exit WebView" : "Open in WebView"}
-                    onClick={toggleWebView}
-                />
-                <Text className={styles.headerRole}>Role: {Security.RoleDisplay}</Text>
-            </Stack>
+            {/* <Stack horizontal verticalAlign="center" tokens={{ childrenGap: 12 }}> */}
+                <Stack verticalAlign="center" tokens={{ childrenGap: 8 }}>
+                    <Stack horizontal verticalAlign="center" tokens={{ childrenGap: 12 }}>
+                        <Text className={styles.headerRole}>Role: {Security.RoleDisplay}</Text>
+                        <IconButton
+                            className={styles.headerIconButton}
+                            iconProps={{ iconName: isWebView ? "BackToWindow" : "OpenInNewWindow" }}
+                            title={isWebView ? "Exit WebView" : "Open in WebView"}
+                            ariaLabel={isWebView ? "Exit WebView" : "Open in WebView"}
+                            onClick={toggleWebView}
+                        />
+                    </Stack>
+                    {onNewCapability && !Security.IsVisitor && (
+                        <PrimaryButton
+                            className={styles.headerNewButton}
+                            iconProps={{ iconName: "Add" }}
+                            text="New Capability"
+                            title="Create a new Capability"
+                            onClick={onNewCapability}
+                        />
+                    )}
+                </Stack>
+            {/* </Stack> */}
         </Stack>
     );
 };

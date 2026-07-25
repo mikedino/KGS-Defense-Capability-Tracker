@@ -72,6 +72,36 @@ $appHeaderSubtleForeground: #e1dfdd;
     }
   }
 
+  .headerNewButton {
+    height: 30px;
+    border-color: #f9b818; // #e81123;
+    background: #f9b818;
+    color: $appHeaderBackground; // #ffffff;
+    font-weight: 600;
+    align-self: flex-end;
+
+    :global {
+      .ms-Button-label,
+      .ms-Button-icon {
+        color: #ffffff;
+      }
+    }
+
+    &:hover,
+    &:focus {
+      border-color: #d69f16; //#c50f1f;
+      background: #d69f16; //#c50f1f;
+      color: #ffffff;
+
+      :global {
+        .ms-Button-label,
+        .ms-Button-icon {
+          color: #ffffff;
+        }
+      }
+    }
+  }
+
   .navSurface,
   .mainNavBar,
   .recordTabs {
@@ -479,6 +509,181 @@ $appHeaderSubtleForeground: #e1dfdd;
 
 
 /* FORM / CONTROLS FORMATTING */
+.capForm {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+
+  :global {
+    .ms-Label {
+      color: #235a93;
+      font-size: 13px;
+      font-weight: 600;
+      line-height: 18px;
+      padding: 0 0 3px;
+    }
+
+    .ms-TextField,
+    .ms-Dropdown-container,
+    .ms-BasePicker,
+    .ms-BasePicker-text {
+      width: 100%;
+      min-width: 0;
+    }
+
+    .ms-TextField-fieldGroup,
+    .ms-BasePicker-text {
+      height: auto;
+      min-height: 34px;
+    }
+
+    .ms-Dropdown-title {
+      height: 34px;
+      line-height: 32px;
+      min-height: 34px;
+      padding: 0 32px 0 8px;
+    }
+
+    .ms-TextField-field,
+    .ms-BasePicker-input {
+      font-size: 13px;
+      min-height: 32px;
+      line-height: 18px;
+    }
+
+    .ms-Dropdown-caretDownWrapper {
+      height: 32px;
+      line-height: 32px;
+      top: 1px;
+    }
+
+    .ms-Dropdown-caretDown {
+      font-size: 12px;
+      line-height: 32px;
+    }
+
+    .ms-TextField-field {
+      padding: 6px 8px;
+    }
+
+    textarea.ms-TextField-field {
+      min-height: 56px;
+      padding: 6px 8px;
+    }
+
+    .ms-Persona-primaryText,
+    .ms-Persona-secondaryText,
+    .ms-PickerPersona-container,
+    .ms-TagItem {
+      font-size: 13px;
+    }
+  }
+}
+
+.formSection {
+  background: #ffffff;
+  border: 1px solid #e1dfdd;
+  border-left: 4px solid #2b579a;
+  border-radius: 4px;
+  padding: 14px 16px 16px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .05);
+}
+
+.formSectionHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+
+  h3 {
+    margin: 0;
+    color: #323130;
+    font-size: 18px;
+    font-weight: 600;
+    line-height: 24px;
+  }
+
+  p {
+    margin: 1px 0 0;
+    color: #605e5c;
+    font-size: 12px;
+    line-height: 17px;
+  }
+}
+
+.formGrid,
+.formGridTwo,
+.formGridThree {
+  display: grid;
+  align-items: start;
+  gap: 10px 14px;
+}
+
+.formGrid {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.formGridTwo {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.formGridThree {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.formFieldFull {
+  grid-column: 1 / -1;
+}
+
+.contractListFrame {
+  border: 1px solid #edebe9;
+  border-radius: 4px;
+  overflow: hidden;
+
+  :global {
+    .ms-DetailsHeader {
+      padding-top: 0;
+    }
+
+    .ms-DetailsHeader-cell {
+      align-items: center;
+      height: 36px;
+      min-height: 36px;
+      padding-bottom: 0;
+      padding-top: 0;
+    }
+
+    .ms-DetailsHeader-cellTitle {
+      align-items: center;
+      height: 36px;
+      padding: 0;
+    }
+
+    .ms-DetailsHeader-cellName {
+      font-size: 13px;
+      line-height: 18px;
+    }
+
+    .ms-DetailsRow {
+      min-height: 40px;
+    }
+
+    .ms-DetailsRow-cell {
+      align-items: center;
+      display: flex;
+      min-height: 40px;
+      padding-bottom: 4px;
+      padding-top: 4px;
+    }
+
+    .ms-Button.ms-Button--icon {
+      height: 28px;
+      width: 28px;
+    }
+  }
+}
+
 .formControl {
   :global {
 
@@ -536,6 +741,10 @@ $appHeaderSubtleForeground: #e1dfdd;
       padding: 12px;
     }
 
+    .headerNewButton {
+      align-self: flex-start;
+    }
+
     .pageContent {
       padding: 12px;
     }
@@ -562,6 +771,16 @@ $appHeaderSubtleForeground: #e1dfdd;
     .tileView {
       grid-template-columns: 1fr;
     }
+  }
+
+  .formGridTwo,
+  .formGridThree {
+    grid-template-columns: 1fr;
+  }
+
+  .formSectionHeader {
+    align-items: stretch;
+    flex-direction: column;
   }
 }
 

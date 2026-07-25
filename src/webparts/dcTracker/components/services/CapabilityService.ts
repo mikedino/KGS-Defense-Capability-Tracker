@@ -3,13 +3,15 @@ import { Web } from "gd-sprest";
 import Strings from "../common/strings";
 import { formatError, encodeListName } from "../common/utils";
 import { DataSource } from "../data/ds";
-import { normalizeOppNetTag, serializeJsonTagField } from "../common/tagUtils";
+import { normalizeOppNetTag, normalizePastPerformanceTag, normalizeProposalTag, parseJsonTagField, serializeJsonTagField } from "../common/tagUtils";
 
 interface ICapabilityPayload extends Omit<ICapabilityItem, "Id"> {
     __metadata: { type: string };
     primaryPocId: number | undefined;
     stakeholdersId: { results: number[] };
     oppNetTagsJson: string;
+    pastPerformanceTagsJson: string;
+    proposalTagsJson: string;
 }
 
 export class CapabilityService {
@@ -39,7 +41,9 @@ export class CapabilityService {
             backend: item.backend,
             primaryPocId: item.primaryPoc?.Id,
             stakeholdersId: { results: item.stakeholders?.results.map((person) => person.Id) ?? [] },
-            oppNetTagsJson: serializeJsonTagField(item.oppNetTags?.map(normalizeOppNetTag))
+            oppNetTagsJson: serializeJsonTagField(item.oppNetTags?.map(normalizeOppNetTag)),
+            pastPerformanceTagsJson: serializeJsonTagField(item.pastPerformanceTags?.map(normalizePastPerformanceTag)),
+            proposalTagsJson: serializeJsonTagField(item.proposalTags?.map(normalizeProposalTag))
         };
     }
 
@@ -51,7 +55,14 @@ export class CapabilityService {
             })
             .executeAndWait();
 
-        return item as unknown as ICapabilityItem;
+        const capability = item as unknown as ICapabilityItem;
+
+        return {
+            ...capability,
+            oppNetTags: parseJsonTagField(capability.oppNetTagsJson),
+            pastPerformanceTags: parseJsonTagField(capability.pastPerformanceTagsJson),
+            proposalTags: parseJsonTagField(capability.proposalTagsJson)
+        };
     }
 
     static create(item: ICapabilityItem): Promise<ICapabilityItem> {

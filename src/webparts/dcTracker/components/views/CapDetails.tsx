@@ -40,6 +40,7 @@ interface CapDetailsProps {
     onHome: () => void;
     activeTab?: CapRouteTab;
     onTabChange?: (tab: CapRouteTab) => void;
+    onNewCapability?: () => void;
 }
 
 interface CustomFile extends File {
@@ -61,7 +62,7 @@ export type DocFolderStatus = "unknown" | "ready" | "missing" | "error";
 const isCapabilityTab = (v: unknown): v is CapRouteTab =>
     v === "overview" || v === "supporting" || v === "contract" || v === "documentation";
 
-export const CapDetails: React.FC<CapDetailsProps> = ({ capability, context, onBack, onHome, activeTab = "overview", onTabChange }) => {
+export const CapDetails: React.FC<CapDetailsProps> = ({ capability, context, onBack, onHome, activeTab = "overview", onTabChange, onNewCapability }) => {
 
     const [capState, setCapState] = useState<ICapabilityItem>(capability);
     const [showCapabilityForm, setShowCapabilityForm] = useState<boolean>(false);
@@ -556,7 +557,7 @@ export const CapDetails: React.FC<CapDetailsProps> = ({ capability, context, onB
 
     return (
         <div className={styles.dcTracker}>
-            <AppHeader />
+            <AppHeader onNewCapability={onNewCapability} />
 
             {/* Page details */}
             <Stack tokens={{ childrenGap: 16 }} className={styles.pageContent}>
@@ -731,6 +732,13 @@ export const CapDetails: React.FC<CapDetailsProps> = ({ capability, context, onB
                 }}
             >
                 <CapForm
+                    key={[
+                        capState.Id,
+                        capState.Modified ?? "",
+                        capState.oppNetTagsJson ?? "",
+                        capState.pastPerformanceTagsJson ?? "",
+                        capState.proposalTagsJson ?? ""
+                    ].join("|")}
                     item={capState}
                     context={context}
                     onCancel={() => setShowCapabilityForm(false)}

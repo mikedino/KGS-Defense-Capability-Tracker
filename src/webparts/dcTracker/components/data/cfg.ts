@@ -263,6 +263,22 @@ export const Configuration = Helper.SPConfig({
                     noteType: SPTypes.FieldNoteType.TextOnly,
                     numberOfLines: 6
                 } as Helper.IFieldInfoNote,
+                {
+                    name: "pastPerformanceTagsJson",
+                    title: "Past Performance Tags",
+                    description: "JSON-backed selected Past Performance tags",
+                    type: Helper.SPCfgFieldType.Note,
+                    noteType: SPTypes.FieldNoteType.TextOnly,
+                    numberOfLines: 6
+                } as Helper.IFieldInfoNote,
+                {
+                    name: "proposalTagsJson",
+                    title: "Proposal Tags",
+                    description: "JSON-backed selected Proposal tags",
+                    type: Helper.SPCfgFieldType.Note,
+                    noteType: SPTypes.FieldNoteType.TextOnly,
+                    numberOfLines: 6
+                } as Helper.IFieldInfoNote,
             ],
             ViewInformation: [
                 {
