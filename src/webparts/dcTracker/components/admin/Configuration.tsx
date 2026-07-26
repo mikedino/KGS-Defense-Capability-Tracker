@@ -42,7 +42,9 @@ const knownConfigTypes: { key: ConfigType; displayName: string }[] = [
     { key: "customer", displayName: "Customer" },
     { key: "partner", displayName: "Relevant Partner Tag" },
     { key: "hostingEnvironment", displayName: "Hosting Environment" },
-    { key: "platform", displayName: "Platform" }
+    { key: "platform", displayName: "Platform" },
+    { key: "solutionType", displayName: "Solution Type" },
+    { key: "documentType", displayName: "Document Type" }
 ];
 
 const getTypeKeys = (items: IConfigItem[]): string[] => {
@@ -222,9 +224,11 @@ export const ConfigManagement: React.FC<IConfigManagementProps> = ({ onChanged }
             key: "title",
             name: "Display Text",
             fieldName: "Title",
-            minWidth: 100,
-            maxWidth: 300,
+            minWidth: 110,
+            maxWidth: 190,
+            currentWidth: 160,
             isResizable: true,
+            isMultiline: true,
             onRender: (item: IConfigItem) => (
                 <Stack styles={{ root: { whiteSpace: "normal", wordBreak: "break-word" } }}>
                     <Text variant="medium" style={{ fontWeight: 600 }}>{item.Title}</Text>
@@ -240,17 +244,24 @@ export const ConfigManagement: React.FC<IConfigManagementProps> = ({ onChanged }
             key: "configValue",
             name: "Saved Value",
             fieldName: "configValue",
-            minWidth: 100,
-            maxWidth: 240,
+            minWidth: 110,
+            maxWidth: 180,
+            currentWidth: 150,
             isResizable: true,
-            onRender: (item: IConfigItem) => <Text>{item.configValue}</Text>
+            isMultiline: true,
+            onRender: (item: IConfigItem) => (
+                <Text styles={{ root: { whiteSpace: "normal", wordBreak: "break-word" } }}>
+                    {item.configValue}
+                </Text>
+            )
         },
         {
             key: "sortOrder",
             name: "Sort",
             fieldName: "sortOrder",
             minWidth: 48,
-            maxWidth: 70,
+            maxWidth: 54,
+            currentWidth: 52,
             isResizable: false,
             onRender: (item: IConfigItem) => <Text>{item.sortOrder ?? ""}</Text>
         },
@@ -258,16 +269,18 @@ export const ConfigManagement: React.FC<IConfigManagementProps> = ({ onChanged }
             key: "isActive",
             name: "Active",
             fieldName: "isActive",
-            minWidth: 48,
-            maxWidth: 80,
+            minWidth: 64,
+            maxWidth: 70,
+            currentWidth: 66,
             isResizable: false,
             onRender: (item: IConfigItem) => <Text>{item.isActive ? "Yes" : "No"}</Text>
         },
         {
             key: "actions",
             name: "",
-            minWidth: 64,
-            maxWidth: 90,
+            minWidth: 70,
+            maxWidth: 74,
+            currentWidth: 72,
             isResizable: false,
             onRender: (item: IConfigItem) => (
                 <Stack horizontal tokens={{ childrenGap: 6 }}>
@@ -275,12 +288,14 @@ export const ConfigManagement: React.FC<IConfigManagementProps> = ({ onChanged }
                         iconProps={{ iconName: "Edit" }}
                         title="Edit"
                         ariaLabel="Edit"
+                        styles={{ root: { width: 28, height: 28 } }}
                         onClick={() => openEdit(item)}
                     />
                     <IconButton
                         iconProps={{ iconName: "Delete" }}
                         title="Delete"
                         ariaLabel="Delete"
+                        styles={{ root: { width: 28, height: 28 } }}
                         onClick={() => openDelete(item)}
                     />
                 </Stack>
@@ -331,6 +346,7 @@ export const ConfigManagement: React.FC<IConfigManagementProps> = ({ onChanged }
                     </Stack>
 
                     <DetailsList
+                        setKey={`config-${selectedType}`}
                         items={listForSelected}
                         columns={columns}
                         selectionMode={SelectionMode.none}
@@ -340,8 +356,15 @@ export const ConfigManagement: React.FC<IConfigManagementProps> = ({ onChanged }
                             <DetailsRow
                                 {...props}
                                 styles={{
-                                    root: { minHeight: 64 },
-                                    cell: { minHeight: 64, height: "auto" }
+                                    root: { minHeight: 40 },
+                                    cell: {
+                                        alignItems: "center",
+                                        display: "flex",
+                                        height: "auto",
+                                        minHeight: 40,
+                                        paddingBottom: 4,
+                                        paddingTop: 4
+                                    }
                                 }}
                             />
                         ) : null}
@@ -387,6 +410,7 @@ export const ConfigManagement: React.FC<IConfigManagementProps> = ({ onChanged }
 
                         <TextField
                             label="Info Text"
+                            placeholder="Optional note that explains when to use this configuration value or what it means to users."
                             value={working.infoText ?? ""}
                             onChange={(_, v) => setWorking({ ...working, infoText: v ?? "" })}
                             multiline

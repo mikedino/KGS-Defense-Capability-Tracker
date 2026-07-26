@@ -178,7 +178,7 @@ export class DataSource {
     // Load the Capabilities
     static capabilityQuerySelect: string[] = [
         "Id", "Title", "description", "capabilities", "link", "capStatus", "notes",
-        "platform", "hostingEnv", "connectivity", "compliance", "licenseReqd",
+        "solutionType", "platform", "hostingEnv", "connectivity", "compliance", "licenseReqd",
         "licenseReqmts", "extensibility", "serverReqmts", "codeLanguage", "backend",
         "oppNetTagsJson", "pastPerformanceTagsJson", "proposalTagsJson", "Modified",
         "primaryPoc/Id", "primaryPoc/Title", "primaryPoc/EMail", "primaryPoc/JobTitle", "primaryPoc/Department",

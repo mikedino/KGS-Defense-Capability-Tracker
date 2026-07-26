@@ -18,9 +18,17 @@ const CapStatusColorMap: Partial<Record<string, ICapStatusColors>> = {
     backgroundColor: Strings.PillStyles.GreenFill,
     textColor: Strings.PillStyles.GreenColor
   },
+  "In Dev": {
+    backgroundColor: Strings.PillStyles.BlueFill,
+    textColor: Strings.PillStyles.BlueColor
+  },
   "In Development": {
     backgroundColor: Strings.PillStyles.BlueFill,
     textColor: Strings.PillStyles.BlueColor
+  },
+  Pending: {
+    backgroundColor: Strings.PillStyles.YellowFill,
+    textColor: Strings.PillStyles.YellowColor
   },
   Enhancing: {
     backgroundColor: Strings.PillStyles.PurpleFill,

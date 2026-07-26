@@ -1,9 +1,11 @@
-export type CapRouteTab = "overview" | "supporting" | "contract" | "documentation";
+export type CapRouteTab = "overview" | "supporting" | "tagging" | "contract" | "documentation";
 
 export const tabFromSlug = (slug?: string): CapRouteTab => {
     switch ((slug ?? "").toLowerCase()) {
         case "support":
             return "supporting";
+        case "tags":
+            return "tagging";
         case "contract":
             return "contract";
         case "docs":
@@ -18,6 +20,8 @@ export const tabToSlug = (tab: CapRouteTab): string => {
     switch (tab) {
         case "supporting":
             return "support";
+        case "tagging":
+            return "tags";
         case "contract":
             return "contract";
         case "documentation":

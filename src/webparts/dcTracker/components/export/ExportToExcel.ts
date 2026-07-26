@@ -19,6 +19,7 @@ export async function exportToExcel(capabilities: ICapabilityItem[]): Promise<tr
     { header: "Link/URL", key: "link", width: 24 },
     { header: "Capability Status", key: "capStatus", width: 20 },
     { header: "Additional Notes", key: "notes", width: 50 },
+    { header: "Solution Type", key: "solutionType", width: 26 },
     { header: "Platform", key: "platform", width: 20 },
     { header: "Hosting Environment", key: "hostingEnv", width: 24 },
     { header: "Connectivity", key: "connectivity", width: 20 },
@@ -46,6 +47,7 @@ export async function exportToExcel(capabilities: ICapabilityItem[]): Promise<tr
       link: cap.link ?? "",
       capStatus: cap.capStatus ?? "",
       notes: cap.notes ?? "",
+      solutionType: cap.solutionType ?? "",
       platform: cap.platform ?? "",
       hostingEnv: cap.hostingEnv ?? "",
       connectivity: cap.connectivity ?? "",
@@ -71,7 +73,7 @@ export async function exportToExcel(capabilities: ICapabilityItem[]): Promise<tr
   worksheet.views = [{ state: "frozen", ySplit: 1 }];
   worksheet.autoFilter = {
     from: "A1",
-    to: "Q1"
+    to: "R1"
   };
 
   const headerRow = worksheet.getRow(1);

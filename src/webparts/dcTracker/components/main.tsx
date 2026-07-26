@@ -48,6 +48,7 @@ const DctContent: React.FC<IDCTrackerProps> = (props) => {
 
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [capStatusFilter, setCapStatusFilter] = useState<string>("all");
+  const [solutionTypeFilter, setSolutionTypeFilter] = useState<string>("all");
   const [platformFilter, setPlatformFilter] = useState<string>("all");
 
   const [viewMode, setViewMode] = useState<string>("list");
@@ -134,16 +135,20 @@ const DctContent: React.FC<IDCTrackerProps> = (props) => {
 
     if (!search) return capabilities;
 
-    const toSearchText = (value?: string): string => (value ?? "").replace(/<[^>]*>/g, " ").toLowerCase();
+    const toSearchText = (value: unknown): string => {
+      if (value === null || value === undefined) return "";
+      if (typeof value === "string") return value.replace(/<[^>]*>/g, " ");
+      if (typeof value === "number" || typeof value === "boolean") return String(value);
+      if (Array.isArray(value)) return value.map(toSearchText).join(" ");
+      if (typeof value === "object") {
+        return Object.values(value as Record<string, unknown>).map(toSearchText).join(" ");
+      }
+
+      return "";
+    };
 
     return capabilities.filter((cap) => {
-      return (
-        (cap.Title ?? "").toLowerCase().includes(search) ||
-        (cap.description ?? "").toLowerCase().includes(search) ||
-        toSearchText(cap.capabilities).includes(search) ||
-        toSearchText(cap.notes).includes(search) ||
-        (cap.link ?? "").toLowerCase().includes(search)
-      );
+      return toSearchText(cap).toLowerCase().includes(search);
     });
   }, [capabilities, searchTerm]);
 
@@ -153,14 +158,16 @@ const DctContent: React.FC<IDCTrackerProps> = (props) => {
   const filteredCapabilities = React.useMemo(() => {
     return searchFilteredCapabilities.filter((cap) => {
       const matchesCapStatus = capStatusFilter === "all" || cap.capStatus === capStatusFilter;
+      const matchesSolutionType = solutionTypeFilter === "all" || cap.solutionType === solutionTypeFilter;
       const matchesPlatform = platformFilter === "all" || cap.platform === platformFilter;
-      return matchesCapStatus && matchesPlatform;
+      return matchesCapStatus && matchesSolutionType && matchesPlatform;
     });
-  }, [searchFilteredCapabilities, capStatusFilter, platformFilter]);
+  }, [searchFilteredCapabilities, capStatusFilter, solutionTypeFilter, platformFilter]);
 
   const handleResetFilters = (): void => {
     setSearchTerm("");
     setCapStatusFilter("all");
+    setSolutionTypeFilter("all");
     setPlatformFilter("all");
   };
 
@@ -177,6 +184,7 @@ const DctContent: React.FC<IDCTrackerProps> = (props) => {
   const filtersActive =
     searchTerm !== "" ||
     capStatusFilter !== "all" ||
+    solutionTypeFilter !== "all" ||
     platformFilter !== "all";
 
   React.useEffect(() => {
@@ -265,14 +273,21 @@ const DctContent: React.FC<IDCTrackerProps> = (props) => {
       { key: "all", text: "All Capability Statuses" },
       ...DataSource.getConfigOptions("capabilityStatus")
     ];
-  }, []);
+  }, [capabilities.length, loading]);
+
+  const solutionTypeOptions: IDropdownOption[] = React.useMemo(() => {
+    return [
+      { key: "all", text: "All Solution Types" },
+      ...DataSource.getConfigOptions("solutionType")
+    ];
+  }, [capabilities.length, loading]);
 
   const platformOptions: IDropdownOption[] = React.useMemo(() => {
     return [
       { key: "all", text: "All Platforms" },
       ...DataSource.getConfigOptions("platform")
     ];
-  }, []);
+  }, [capabilities.length, loading]);
 
 
   const handleExportCapsToExcel = (capabilities: ICapabilityItem[]): void => {
@@ -426,7 +441,7 @@ const DctContent: React.FC<IDCTrackerProps> = (props) => {
   if (loading) {
     return (
       <div className={styles.dcTracker}>
-        <Stack horizontalAlign="center" verticalAlign="center" style={{ height: "200px" }}>
+        <Stack className={styles.loadingShell} horizontalAlign="center" verticalAlign="center">
           <Spinner size={SpinnerSize.large} label="Initializing Defense Capabilities Tracker..." />
         </Stack>
       </div>
@@ -519,7 +534,7 @@ const DctContent: React.FC<IDCTrackerProps> = (props) => {
                   {/* Filters */}
                   <Stack horizontal tokens={{ childrenGap: 10 }} wrap verticalAlign='center'>
                     <SearchBox
-                      placeholder="Search capabilities, descriptions, notes, links..."
+                      placeholder="Search any capability field..."
                       value={searchTerm}
                       onChange={(_, newValue) => setSearchTerm(newValue || "")}
                       styles={{ root: { width: 325 } }}
@@ -528,14 +543,21 @@ const DctContent: React.FC<IDCTrackerProps> = (props) => {
                       placeholder="Filter by Capability Status"
                       options={capStatusOptions}
                       selectedKey={capStatusFilter}
-                      onChange={(event, option) => setCapStatusFilter(option?.key as string)}
+                      onChange={(_, option) => setCapStatusFilter((option?.key as string) ?? "all")}
                       styles={{ dropdown: { width: 150 } }}
+                    />
+                    <Dropdown
+                      placeholder="Filter by Solution Type"
+                      options={solutionTypeOptions}
+                      selectedKey={solutionTypeFilter}
+                      onChange={(_, option) => setSolutionTypeFilter((option?.key as string) ?? "all")}
+                      styles={{ dropdown: { width: 220 } }}
                     />
                     <Dropdown
                       placeholder="Filter by Platform"
                       options={platformOptions}
                       selectedKey={platformFilter}
-                      onChange={(event, option) => setPlatformFilter(option?.key as string)}
+                      onChange={(_, option) => setPlatformFilter((option?.key as string) ?? "all")}
                       styles={{ dropdown: { width: 220 } }}
                     />
 
@@ -758,7 +780,7 @@ const DctContent: React.FC<IDCTrackerProps> = (props) => {
           <Spinner size={SpinnerSize.large} label={spinnerMessage} />
         </Dialog>
 
-        <Stack horizontalAlign='end' style={{ maxWidth: 1600 }}>
+        <Stack horizontalAlign="end" style={{ maxWidth: 1600, marginLeft:"auto", marginRight: "auto" }}>
           <Text variant='xSmall'>Tracker Version: {Strings.Version}</Text>
         </Stack>
 

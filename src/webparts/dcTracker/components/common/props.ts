@@ -23,7 +23,6 @@ export interface IPeoplePickerExtended extends IPeoplePicker {
     Department?: string;
 }
 
-export type DocumentType = "Screenshot" | "Other";
 export type licenseReqdChoices = "Yes" | "No";
 export type ConfigType =
     | "backend"
@@ -34,7 +33,9 @@ export type ConfigType =
     | "customer"
     | "partner"
     | "hostingEnvironment"
-    | "platform";
+    | "platform"
+    | "documentType"
+    | "solutionType";
 //export type CapabilityStatus = "Active" | "In Dev" | "Pending"
 
 export interface ICapabilityItem {
@@ -53,6 +54,7 @@ export interface ICapabilityItem {
     notes?: string; //multi-line
 
     /* TECHNICAL INFO */
+    solutionType?: string; //config
     platform: string; //config
     hostingEnv?: string; //config
     connectivity: string; //config

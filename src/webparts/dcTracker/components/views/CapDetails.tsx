@@ -11,7 +11,7 @@ import { WebPartContext } from "@microsoft/sp-webpart-base";
 import { DataSource } from '../data/ds';
 import { ContextInfo, Helper } from 'gd-sprest-bs';
 import { Web } from 'gd-sprest-bs';
-import { DocumentType, ICapabilityItem, ICapFormSaveResult, IContractItem, IDocumentItem } from "../common/props";
+import { ICapabilityItem, ICapFormSaveResult, IContractItem, IDocumentItem } from "../common/props";
 import styles from '../Dct.module.scss';
 import Strings from '../common/strings';
 import { customPivotStyles } from '../ui/ComponentStyles';
@@ -26,6 +26,7 @@ import { DocumentForm } from '../forms/DocumentForm';
 import { CapabilityOverview } from './capDetails/CapOverview';
 import { SupportingInfo } from './capDetails/CapSupportingInfo';
 import { ContractInfo } from './capDetails/CapContract';
+import { TaggingInfo } from './capDetails/CapTagging';
 import { Security } from '../services/Security';
 import { fetchFileDataUrlFromDocumentItem } from '../export/ExportPdfUtils';
 import { exportCapabilityPdf } from '../export/ExportPdfWrapper';
@@ -60,7 +61,7 @@ const dialogStyles = mergeStyleSets({
 export type DocFolderStatus = "unknown" | "ready" | "missing" | "error";
 
 const isCapabilityTab = (v: unknown): v is CapRouteTab =>
-    v === "overview" || v === "supporting" || v === "contract" || v === "documentation";
+    v === "overview" || v === "supporting" || v === "tagging" || v === "contract" || v === "documentation";
 
 export const CapDetails: React.FC<CapDetailsProps> = ({ capability, context, onBack, onHome, activeTab = "overview", onTabChange, onNewCapability }) => {
 
@@ -149,15 +150,9 @@ export const CapDetails: React.FC<CapDetailsProps> = ({ capability, context, onB
         }
     }, [showDocUploadDialog]);
 
-    // strongly typed - document type options in dialog box. Create mapped object, then derive the array from it.
-    const docTypeMap: Record<DocumentType, string> = {
-        Screenshot: "Screenshot",
-        Other: "Other"
-    };
-    const docTypeOptions = (Object.keys(docTypeMap) as DocumentType[]).map((key) => ({
-        key,
-        text: docTypeMap[key]
-    }));
+    const docTypeOptions = React.useMemo<IDropdownOption[]>(() => {
+        return DataSource.getConfigOptions("documentType");
+    }, [showDocUploadDialog]);
 
     const uploadFile = (fileName: string, file: CustomFile): Promise<IDocumentItem> => {
         return new Promise((resolve, reject) => {
@@ -639,6 +634,7 @@ export const CapDetails: React.FC<CapDetailsProps> = ({ capability, context, onB
                         >
                             <PivotItem itemKey="overview" headerText="Overview" />
                             <PivotItem itemKey="supporting" headerText="Supporting Info" />
+                            <PivotItem itemKey="tagging" headerText="Tagging" />
                             {canViewContract && <PivotItem itemKey="contract" headerText="Contract" />}
                             <PivotItem itemKey="documentation" headerText="Documentation" />
                         </Pivot>
@@ -663,6 +659,10 @@ export const CapDetails: React.FC<CapDetailsProps> = ({ capability, context, onB
 
                         {activeTab === "supporting" && (
                             <SupportingInfo capState={capState} />
+                        )}
+
+                        {activeTab === "tagging" && (
+                            <TaggingInfo capState={capState} />
                         )}
 
                         {activeTab === "contract" && canViewContract && (
@@ -813,7 +813,7 @@ export const CapDetails: React.FC<CapDetailsProps> = ({ capability, context, onB
                     label="Document Type"
                     required
                     options={docTypeOptions}
-                    onChange={(event: React.FormEvent<HTMLDivElement>, option?: IDropdownOption) => setDocumentType(option?.key as DocumentType)}
+                    onChange={(_, option?: IDropdownOption) => setDocumentType((option?.key as string) ?? undefined)}
                     style={{ marginBottom: 20 }}
                 />
                 <div style={{ padding: "10px 0" }}>&nbsp;</div>

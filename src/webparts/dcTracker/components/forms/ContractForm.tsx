@@ -15,7 +15,6 @@ import {
     IPersonaProps,
     PrimaryButton,
     Stack,
-    Text,
     TextField
 } from "@fluentui/react";
 import { PeoplePicker, PrincipalType } from "@pnp/spfx-controls-react/lib/PeoplePicker";
@@ -23,7 +22,6 @@ import { WebPartContext } from "@microsoft/sp-webpart-base";
 import { IContractEndPointItem, IContractItem } from "../common/props";
 import { DataSource } from "../data/ds";
 import styles from "../Dct.module.scss";
-import { cardStackStyles } from "../ui/ComponentStyles";
 import { Security } from "../services/Security";
 import { onFormatDate, resolveUserByEmail } from "../common/utils";
 
@@ -37,9 +35,6 @@ export interface IContractFormProps {
 
 type JamisLookupField = "contractId" | "Title" | "customerContractCode";
 const maxJamisResults = 20;
-const contractIdControlStyles = { root: { width: 145, flexShrink: 0 } };
-const contractTitleControlStyles = { root: { minWidth: 320, flexGrow: 1 } };
-const contractCodeControlStyles = { root: { width: 230, flexShrink: 0 } };
 
 export const ContractForm: React.FC<IContractFormProps> = ({ item, context, onSave, onDelete, onCancel }) => {
     const [formData, setFormData] = React.useState<IContractItem>({
@@ -180,7 +175,7 @@ export const ContractForm: React.FC<IContractFormProps> = ({ item, context, onSa
             option: { height: 76, minHeight: 76, padding: 0 },
             optionText: { display: "block", whiteSpace: "normal" as const, height: "auto", overflow: "visible" as const }
         },
-        styles: { root: { minWidth: 220, flexGrow: 1 } }
+        styles: { root: { width: "100%" } }
     };
 
     const handlePerson = (items: IPersonaProps[]): void => {
@@ -201,14 +196,16 @@ export const ContractForm: React.FC<IContractFormProps> = ({ item, context, onSa
     const canEdit = Security.IsAdmin || Security.IsContributor;
 
     return (
-        <Stack tokens={{ childrenGap: 20 }}>
-            <Stack styles={{ root: [cardStackStyles.root, { paddingBottom: 24 }] }} tokens={{ childrenGap: 12 }}>
-                <Stack>
-                    <Text variant="large">Contract Info</Text>
-                    <Text variant="small">Use Contract ID, Contract Title, or Customer Contract Code to find and select a Jamis contract.</Text>
-                </Stack>
+        <div className={styles.capForm}>
+            <section className={styles.formSection}>
+                <div className={styles.formSectionHeader}>
+                    <div>
+                        <h3>Contract Info</h3>
+                        <p>Use Contract ID, Contract Title, or Customer Contract Code to find and select a Jamis contract.</p>
+                    </div>
+                </div>
 
-                <Stack horizontal wrap tokens={{ childrenGap: 12 }}>
+                <div className={`${styles.formGridThree} ${styles.contractLookupGrid}`}>
                     <ComboBox
                         label="Contract ID"
                         className={styles.formControl}
@@ -223,7 +220,6 @@ export const ContractForm: React.FC<IContractFormProps> = ({ item, context, onSa
                             _event: React.FormEvent<IComboBox>,
                             option?: IComboBoxOption
                         ) => handleJamisSelect(option)}
-                        styles={contractIdControlStyles}
                     />
 
                     <ComboBox
@@ -241,7 +237,6 @@ export const ContractForm: React.FC<IContractFormProps> = ({ item, context, onSa
                             option?: IComboBoxOption
                         ) => handleJamisSelect(option)}
                         required
-                        styles={contractTitleControlStyles}
                     />
 
                     <ComboBox
@@ -258,11 +253,10 @@ export const ContractForm: React.FC<IContractFormProps> = ({ item, context, onSa
                             _event: React.FormEvent<IComboBox>,
                             option?: IComboBoxOption
                         ) => handleJamisSelect(option)}
-                        styles={contractCodeControlStyles}
                     />
-                </Stack>
+                </div>
 
-                <Stack horizontal wrap tokens={{ childrenGap: 12 }}>
+                <div className={styles.formGridTwo}>
                     <Dropdown
                         label="Customer"
                         className={styles.formControl}
@@ -272,11 +266,10 @@ export const ContractForm: React.FC<IContractFormProps> = ({ item, context, onSa
                         onChange={(_, option) => {
                             if (option) handleChange("customer", option.key as CustomerType);
                         }}
-                        styles={{ root: { minWidth: 220, flexGrow: 1 } }}
                     />
-                </Stack>
+                </div>
 
-                <Stack horizontal wrap tokens={{ childrenGap: 12 }}>
+                <div className={styles.formGridTwo}>
                     <DatePicker
                         label="Capability Start Date"
                         className={styles.formControl}
@@ -286,7 +279,6 @@ export const ContractForm: React.FC<IContractFormProps> = ({ item, context, onSa
                         onSelectDate={(date) => handleChange("startDate", date ? date.toISOString() : "")}
                         allowTextInput
                         formatDate={onFormatDate}
-                        styles={{ root: { width: 220 } }}
                     />
 
                     <DatePicker
@@ -298,11 +290,10 @@ export const ContractForm: React.FC<IContractFormProps> = ({ item, context, onSa
                         onSelectDate={(date) => handleChange("endDate", date ? date.toISOString() : "")}
                         allowTextInput
                         formatDate={onFormatDate}
-                        styles={{ root: { width: 220 } }}
                     />
-                </Stack>
+                </div>
 
-                <Stack horizontal wrap tokens={{ childrenGap: 12 }}>
+                <div className={styles.formGridTwo}>
                     <PeoplePicker
                         key={`contractPm-${formData.contractPm?.EMail ?? "none"}`}
                         context={{
@@ -320,12 +311,10 @@ export const ContractForm: React.FC<IContractFormProps> = ({ item, context, onSa
                         onChange={handlePerson}
                         principalTypes={[PrincipalType.User]}
                         resolveDelay={1000}
-                        styles={{ root: { minWidth: 320, flexGrow: 1 } }}
                     />
+                </div>
 
-                </Stack>
-
-                <Stack horizontal wrap tokens={{ childrenGap: 12 }}>
+                <div className={styles.formGridTwo}>
                     <Dropdown
                         label="Relevant Partner Tag"
                         className={styles.formControl}
@@ -335,7 +324,6 @@ export const ContractForm: React.FC<IContractFormProps> = ({ item, context, onSa
                         onChange={(_, option) => {
                             if (option) handleChange("partner", option.key as PartnerType);
                         }}
-                        styles={{ root: { minWidth: 240, flexGrow: 1 } }}
                     />
 
                     <TextField
@@ -344,10 +332,9 @@ export const ContractForm: React.FC<IContractFormProps> = ({ item, context, onSa
                         value={formData.infoLink ?? ""}
                         disabled={!canEdit}
                         onChange={(_, val) => handleChange("infoLink", val ?? "")}
-                        styles={{ root: { minWidth: 280, flexGrow: 2 } }}
                     />
-                </Stack>
-            </Stack>
+                </div>
+            </section>
 
             <Stack horizontal horizontalAlign="space-between" tokens={{ childrenGap: 10 }} styles={{ root: { paddingTop: 20 } }}>
                 {item ? (
@@ -390,6 +377,6 @@ export const ContractForm: React.FC<IContractFormProps> = ({ item, context, onSa
                     <DefaultButton text="Cancel" onClick={() => setShowDeleteConfirmation(false)} title="Close Dialog Box" />
                 </DialogFooter>
             </Dialog>
-        </Stack>
+        </div>
     );
 };

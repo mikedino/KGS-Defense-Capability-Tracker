@@ -10,6 +10,7 @@ $appHeaderSubtleForeground: #e1dfdd;
   padding: 0;
   //background-color: $ms-color-white;
   width: 100%;
+  min-height: 800px;
 
   .pageContent {
     width: 100%;
@@ -18,6 +19,13 @@ $appHeaderSubtleForeground: #e1dfdd;
     margin-right: auto;
     padding: 20px;
     box-sizing: border-box;
+  }
+
+  .loadingShell {
+    align-items: center;
+    display: flex;
+    justify-content: center;
+    min-height: inherit;
   }
 
   .title {
@@ -74,9 +82,9 @@ $appHeaderSubtleForeground: #e1dfdd;
 
   .headerNewButton {
     height: 30px;
-    border-color: #f9b818; // #e81123;
-    background: #f9b818;
-    color: $appHeaderBackground; // #ffffff;
+    border-color: #e81123; //#f9b818;
+    background: #e81123;
+    color: #ffffff;
     font-weight: 600;
     align-self: flex-end;
 
@@ -89,8 +97,8 @@ $appHeaderSubtleForeground: #e1dfdd;
 
     &:hover,
     &:focus {
-      border-color: #d69f16; //#c50f1f;
-      background: #d69f16; //#c50f1f;
+      border-color: #c50f1f; // #d69f16; 
+      background: #c50f1f;
       color: #ffffff;
 
       :global {
@@ -417,6 +425,23 @@ $appHeaderSubtleForeground: #e1dfdd;
     background: $ms-color-white;
   }
 
+  .tagDetailCard {
+    border: 1px solid $ms-color-neutralLighter;
+    border-radius: 4px;
+    background: #faf9f8;
+    padding: 12px;
+  }
+
+  .tagDetailGrid {
+    display: grid;
+    gap: 10px 20px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .tagDetailField {
+    min-width: 0;
+  }
+
   .linkedAppsFlows {
     display: "inline-flex";
     max-width: "fit-content";
@@ -517,34 +542,56 @@ $appHeaderSubtleForeground: #e1dfdd;
   :global {
     .ms-Label {
       color: #235a93;
+      display: flex;
+      align-items: flex-end;
       font-size: 13px;
       font-weight: 600;
+      min-height: 21px;
       line-height: 18px;
       padding: 0 0 3px;
     }
 
     .ms-TextField,
     .ms-Dropdown-container,
+    .ms-ComboBox-container,
+    .ms-DatePicker,
     .ms-BasePicker,
     .ms-BasePicker-text {
+      margin: 0 !important;
       width: 100%;
       min-width: 0;
     }
 
+    .ms-TextField,
+    .ms-Dropdown-container,
+    .ms-ComboBox-container,
+    .ms-DatePicker {
+      display: flex;
+      flex-direction: column;
+    }
+
     .ms-TextField-fieldGroup,
+    .ms-ComboBox,
     .ms-BasePicker-text {
       height: auto;
       min-height: 34px;
     }
 
-    .ms-Dropdown-title {
+    .ms-Dropdown {
       height: 34px;
-      line-height: 32px;
+    }
+
+    .ms-Dropdown-title {
+      display: flex;
+      align-items: center;
+      height: 34px;
+      line-height: normal;
       min-height: 34px;
       padding: 0 32px 0 8px;
     }
 
     .ms-TextField-field,
+    .ms-ComboBox-Input,
     .ms-BasePicker-input {
       font-size: 13px;
       min-height: 32px;
@@ -552,14 +599,17 @@ $appHeaderSubtleForeground: #e1dfdd;
     }
 
     .ms-Dropdown-caretDownWrapper {
-      height: 32px;
-      line-height: 32px;
-      top: 1px;
+      align-items: center;
+      display: flex;
+      height: 34px;
+      justify-content: center;
+      line-height: normal;
+      top: 0;
     }
 
     .ms-Dropdown-caretDown {
       font-size: 12px;
-      line-height: 32px;
+      line-height: normal;
     }
 
     .ms-TextField-field {
@@ -578,6 +628,14 @@ $appHeaderSubtleForeground: #e1dfdd;
       font-size: 13px;
     }
   }
+}
+
+.formHelpText {
+  color: #605e5c;
+  display: block;
+  font-size: 11px;
+  line-height: 15px;
+  margin-top: 3px;
 }
 
 .formSection {
@@ -617,7 +675,19 @@ $appHeaderSubtleForeground: #e1dfdd;
 .formGridThree {
   display: grid;
   align-items: start;
-  gap: 10px 14px;
+  gap: 12px 20px;
+}
+
+.formGrid + .formGrid,
+.formGrid + .formGridTwo,
+.formGrid + .formGridThree,
+.formGridTwo + .formGrid,
+.formGridTwo + .formGridTwo,
+.formGridTwo + .formGridThree,
+.formGridThree + .formGrid,
+.formGridThree + .formGridTwo,
+.formGridThree + .formGridThree {
+  margin-top: 12px;
 }
 
 .formGrid {
@@ -632,6 +702,10 @@ $appHeaderSubtleForeground: #e1dfdd;
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+.contractLookupGrid {
+  grid-template-columns: 145px minmax(320px, 1fr) minmax(280px, 386px);
+}
+
 .formFieldFull {
   grid-column: 1 / -1;
 }
@@ -643,21 +717,25 @@ $appHeaderSubtleForeground: #e1dfdd;
 
   :global {
     .ms-DetailsHeader {
+      background: #faf9f8;
+      height: 40px;
+      min-height: 40px;
       padding-top: 0;
     }
 
     .ms-DetailsHeader-cell {
       align-items: center;
-      height: 36px;
-      min-height: 36px;
+      background: #faf9f8;
+      height: 40px;
+      min-height: 40px;
       padding-bottom: 0;
       padding-top: 0;
     }
 
     .ms-DetailsHeader-cellTitle {
       align-items: center;
-      height: 36px;
-      padding: 0;
+      height: 40px;
+      padding: 0 8px 0 16px;
     }
 
     .ms-DetailsHeader-cellName {
@@ -674,6 +752,7 @@ $appHeaderSubtleForeground: #e1dfdd;
       display: flex;
       min-height: 40px;
       padding-bottom: 4px;
+      padding-left: 16px;
       padding-top: 4px;
     }
 
@@ -685,6 +764,9 @@ $appHeaderSubtleForeground: #e1dfdd;
 }
 
 .formControl {
+  margin: 0 !important;
+  min-width: 0;
+
   :global {
 
     // TextField
@@ -774,7 +856,9 @@ $appHeaderSubtleForeground: #e1dfdd;
   }
 
   .formGridTwo,
-  .formGridThree {
+  .formGridThree,
+  .contractLookupGrid,
+  .tagDetailGrid {
     grid-template-columns: 1fr;
   }
 

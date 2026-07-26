@@ -184,19 +184,25 @@ export const Configuration = Helper.SPConfig({
                 {
                     name: "platform",
                     title: "Platform",
-                    description: "Choices from config list",
+                    description: "Primary ecosystem or technology family the capability is built on, such as SharePoint, Power Platform, Azure, Microsoft 365, AWS, or on-premises.",
+                    type: Helper.SPCfgFieldType.Text
+                },
+                {
+                    name: "solutionType",
+                    title: "Solution Type",
+                    description: "High-level kind of solution being showcased, such as SPFx, Power App, Power BI, Web App, AI Solution, Mobile App, API/Service, or Automation.",
                     type: Helper.SPCfgFieldType.Text
                 },
                 {
                     name: "hostingEnv",
                     title: "Hosting Environment",
-                    description: "Choices from config list",
+                    description: "Where the capability runs or is hosted, such as SharePoint Online, Azure App Service, Dataverse, on-premises server, client device, vendor SaaS, or hybrid.",
                     type: Helper.SPCfgFieldType.Text
                 },
                 {
                     name: "connectivity",
                     title: "Connectivity",
-                    description: "Choices from config list",
+                    description: "Customer network, access, or integration requirement needed to use the capability, such as internal, external, VPN, CAC/PIV, NIPR/SIPR, offline, or API integration.",
                     type: Helper.SPCfgFieldType.Text
                 },
                 {
@@ -235,13 +241,13 @@ export const Configuration = Helper.SPConfig({
                 {
                     name: "codeLanguage",
                     title: "Coding Language",
-                    description: "Choices from config list",
+                    description: "Primary implementation language when custom code matters. Use None / Low-Code for Power Platform, BI, or configuration-focused solutions.",
                     type: Helper.SPCfgFieldType.Text
                 },
                 {
                     name: "backend",
                     title: "Backend",
-                    description: "Choices from config list",
+                    description: "Primary data store, processing layer, or external system powering the capability, such as SharePoint Lists, Dataverse, SQL, APIs, Graph, file share, or no backend.",
                     type: Helper.SPCfgFieldType.Text
                 },
                 {
@@ -288,6 +294,7 @@ export const Configuration = Helper.SPConfig({
                     ViewFields: [
                         "LinkTitle",
                         "capStatus",
+                        "solutionType",
                         "platform",
                         "hostingEnv",
                         "connectivity",
@@ -321,7 +328,7 @@ export const Configuration = Helper.SPConfig({
                     name: "docType",
                     title: "Document Type",
                     type: Helper.SPCfgFieldType.Choice,
-                    choices: ["Screenshot", "Other"],
+                    choices: ["Screenshot", "Technical", "Requirements", "Testing", "508 Compliance", "User Guides/User Manuals", "FAQ"],
                 } as Helper.IFieldInfoChoice
             ],
             ViewInformation: [

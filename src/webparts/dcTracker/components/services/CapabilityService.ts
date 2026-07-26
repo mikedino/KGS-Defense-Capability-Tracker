@@ -29,6 +29,7 @@ export class CapabilityService {
             link: item.link,
             capStatus: item.capStatus,
             notes: item.notes,
+            solutionType: item.solutionType,
             platform: item.platform,
             hostingEnv: item.hostingEnv,
             compliance: item.compliance,

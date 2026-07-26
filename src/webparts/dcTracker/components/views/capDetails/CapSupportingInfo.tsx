@@ -24,6 +24,7 @@ export const SupportingInfo: React.FC<ISupportingInfoProps> = ({ capState }) => 
     return (
         <Stack tokens={{ childrenGap: 16 }}>
             <Stack horizontal wrap tokens={{ childrenGap: 16 }} className={styles.detailCard}>
+                <FieldDisplay label="Solution Type" value={capState.solutionType} />
                 <FieldDisplay label="Platform" value={capState.platform} />
                 <FieldDisplay label="Hosting Environment" value={capState.hostingEnv} />
                 <FieldDisplay label="Connectivity" value={capState.connectivity} />

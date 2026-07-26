@@ -50,6 +50,10 @@ type IOppNetTag = ISourceTag<IOpportunityItem>;
 type IPastPerformanceTag = ISourceTag<IPastPerformanceItem>;
 type IProposalTag = ISourceTag<IProposalItem>;
 
+const FieldHelp: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+    <Text className={styles.formHelpText}>{children}</Text>
+);
+
 export const CapForm: React.FC<ICapFormProps> = ({ item, context, onSave, onDelete, onCancel }) => {
     const [submitted, setSubmitted] = React.useState<boolean>(false);
     const [titleError, setTitleError] = React.useState<string | undefined>(undefined);
@@ -75,6 +79,7 @@ export const CapForm: React.FC<ICapFormProps> = ({ item, context, onSave, onDele
     const [selectedContract, setSelectedContract] = React.useState<ICapabilityContractDraft | undefined>(undefined);
 
     type CapStatusType = ICapabilityItem["capStatus"];
+    type SolutionType = ICapabilityItem["solutionType"];
     type PlatformType = ICapabilityItem["platform"];
     type HostingEnvType = ICapabilityItem["hostingEnv"];
     type ConnectivityType = ICapabilityItem["connectivity"];
@@ -92,6 +97,7 @@ export const CapForm: React.FC<ICapFormProps> = ({ item, context, onSave, onDele
         primaryPoc: item?.primaryPoc?.Id ? item.primaryPoc : undefined,
         stakeholders: { results: item?.stakeholders?.results ?? [] },
         notes: item?.notes || "",
+        solutionType: item?.solutionType || "",
         platform: item?.platform || "",
         hostingEnv: item?.hostingEnv || "",
         connectivity: item?.connectivity || "",
@@ -111,6 +117,7 @@ export const CapForm: React.FC<ICapFormProps> = ({ item, context, onSave, onDele
     });
 
     const capStatusOptions = React.useMemo<IDropdownOption[]>(() => DataSource.getConfigOptions("capabilityStatus"), []);
+    const solutionTypeOptions = React.useMemo<IDropdownOption[]>(() => DataSource.getConfigOptions("solutionType"), []);
     const platformOptions = React.useMemo<IDropdownOption[]>(() => DataSource.getConfigOptions("platform"), []);
     const hostingEnvOptions = React.useMemo<IDropdownOption[]>(() => DataSource.getConfigOptions("hostingEnvironment"), []);
     const connectivityOptions = React.useMemo<IDropdownOption[]>(() => DataSource.getConfigOptions("connectivity"), []);
@@ -645,6 +652,7 @@ export const CapForm: React.FC<ICapFormProps> = ({ item, context, onSave, onDele
                                     className={styles.formControl}
                                     multiline
                                     autoAdjustHeight
+                                    placeholder="Summarize what the capability does, who it helps, and the business or mission problem it solves."
                                     value={formData.description ?? ""}
                                     onChange={(_, val) => handleChange("description", val ?? "")}
                                 />
@@ -656,6 +664,7 @@ export const CapForm: React.FC<ICapFormProps> = ({ item, context, onSave, onDele
                                     className={styles.formControl}
                                     multiline
                                     autoAdjustHeight
+                                    placeholder="List the major functions, features, integrations, automations, reports, workflows, or technical strengths that would matter in a bid."
                                     value={formData.capabilities ?? ""}
                                     onChange={(_, val) => handleChange("capabilities", val ?? "")}
                                 />
@@ -685,6 +694,7 @@ export const CapForm: React.FC<ICapFormProps> = ({ item, context, onSave, onDele
                                     className={styles.formControl}
                                     multiline
                                     autoAdjustHeight
+                                    placeholder="Capture selling notes, caveats, dependencies, customer context, demo notes, reuse considerations, or anything else useful for positioning this capability."
                                     value={formData.notes ?? ""}
                                     onChange={(_, val) => handleChange("notes", val ?? "")}
                                 />
@@ -733,35 +743,57 @@ export const CapForm: React.FC<ICapFormProps> = ({ item, context, onSave, onDele
                         </div>
 
                         <div className={styles.formGridTwo}>
-                            <Dropdown
-                                label="Platform"
-                                className={styles.formControl}
-                                selectedKey={formData.platform || undefined}
-                                options={platformOptions}
-                                onChange={(_, option) => {
-                                    if (option) handleChange("platform", option.key as PlatformType);
-                                }}
-                            />
+                            <div>
+                                <Dropdown
+                                    label="Solution Type"
+                                    className={styles.formControl}
+                                    selectedKey={formData.solutionType || undefined}
+                                    options={solutionTypeOptions}
+                                    onChange={(_, option) => {
+                                        if (option) handleChange("solutionType", option.key as SolutionType);
+                                    }}
+                                />
+                                <FieldHelp>What kind of capability this is?</FieldHelp>
+                            </div>
 
-                            <Dropdown
-                                label="Hosting Environment"
-                                className={styles.formControl}
-                                selectedKey={formData.hostingEnv || undefined}
-                                options={hostingEnvOptions}
-                                onChange={(_, option) => {
-                                    if (option) handleChange("hostingEnv", option.key as HostingEnvType);
-                                }}
-                            />
+                            <div>
+                                <Dropdown
+                                    label="Platform"
+                                    className={styles.formControl}
+                                    selectedKey={formData.platform || undefined}
+                                    options={platformOptions}
+                                    onChange={(_, option) => {
+                                        if (option) handleChange("platform", option.key as PlatformType);
+                                    }}
+                                />
+                                <FieldHelp>The primary ecosystem or technology family.</FieldHelp>
+                            </div>
 
-                            <Dropdown
-                                label="Connectivity"
-                                className={styles.formControl}
-                                selectedKey={formData.connectivity || undefined}
-                                options={connectivityOptions}
-                                onChange={(_, option) => {
-                                    if (option) handleChange("connectivity", option.key as ConnectivityType);
-                                }}
-                            />
+                            <div>
+                                <Dropdown
+                                    label="Hosting Environment"
+                                    className={styles.formControl}
+                                    selectedKey={formData.hostingEnv || undefined}
+                                    options={hostingEnvOptions}
+                                    onChange={(_, option) => {
+                                        if (option) handleChange("hostingEnv", option.key as HostingEnvType);
+                                    }}
+                                />
+                                <FieldHelp>Where it runs.</FieldHelp>
+                            </div>
+
+                            <div>
+                                <Dropdown
+                                    label="Connectivity"
+                                    className={styles.formControl}
+                                    selectedKey={formData.connectivity || undefined}
+                                    options={connectivityOptions}
+                                    onChange={(_, option) => {
+                                        if (option) handleChange("connectivity", option.key as ConnectivityType);
+                                    }}
+                                />
+                                <FieldHelp>What customer access or network conditions are needed.</FieldHelp>
+                            </div>
 
                             <Dropdown
                                 label="Compliance"
@@ -786,25 +818,31 @@ export const CapForm: React.FC<ICapFormProps> = ({ item, context, onSave, onDele
                                 }}
                             />
 
-                            <Dropdown
-                                label="Coding Language"
-                                className={styles.formControl}
-                                selectedKey={formData.codeLanguage || undefined}
-                                options={codeLanguageOptions}
-                                onChange={(_, option) => {
-                                    if (option) handleChange("codeLanguage", option.key as CodeLanguageType);
-                                }}
-                            />
+                            <div>
+                                <Dropdown
+                                    label="Coding Language"
+                                    className={styles.formControl}
+                                    selectedKey={formData.codeLanguage || undefined}
+                                    options={codeLanguageOptions}
+                                    onChange={(_, option) => {
+                                        if (option) handleChange("codeLanguage", option.key as CodeLanguageType);
+                                    }}
+                                />
+                                <FieldHelp>Primary implementation language when custom code matters. Use None / Low-Code for Power Platform, BI, or configuration-focused solutions.</FieldHelp>
+                            </div>
 
-                            <Dropdown
-                                label="Backend"
-                                className={styles.formControl}
-                                selectedKey={formData.backend || undefined}
-                                options={backendOptions}
-                                onChange={(_, option) => {
-                                    if (option) handleChange("backend", option.key as BackendType);
-                                }}
-                            />
+                            <div>
+                                <Dropdown
+                                    label="Backend"
+                                    className={styles.formControl}
+                                    selectedKey={formData.backend || undefined}
+                                    options={backendOptions}
+                                    onChange={(_, option) => {
+                                        if (option) handleChange("backend", option.key as BackendType);
+                                    }}
+                                />
+                                <FieldHelp>Main data store, processing layer, or external system powering the capability.</FieldHelp>
+                            </div>
                         </div>
 
                         <div className={styles.formGrid}>
@@ -813,6 +851,7 @@ export const CapForm: React.FC<ICapFormProps> = ({ item, context, onSave, onDele
                                 className={styles.formControl}
                                 multiline
                                 autoAdjustHeight
+                                placeholder="Describe any licenses, subscriptions, product SKUs, user entitlements, or customer-provided licensing needed to deploy or use this capability."
                                 value={formData.licenseReqmts ?? ""}
                                 onChange={(_, val) => handleChange("licenseReqmts", val ?? "")}
                             />
@@ -822,6 +861,7 @@ export const CapForm: React.FC<ICapFormProps> = ({ item, context, onSave, onDele
                                 className={styles.formControl}
                                 multiline
                                 autoAdjustHeight
+                                placeholder="Note available APIs, integrations, extension points, data connections, automation hooks, or external systems this capability depends on or can connect to."
                                 value={formData.extensibility ?? ""}
                                 onChange={(_, val) => handleChange("extensibility", val ?? "")}
                             />

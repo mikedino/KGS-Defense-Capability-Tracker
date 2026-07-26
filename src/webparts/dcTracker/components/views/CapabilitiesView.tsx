@@ -38,6 +38,10 @@ export const CapabilitiesList: React.FunctionComponent<ICapabilitiesListProps> =
                     aVal = (a.platform || "").toLowerCase();
                     bVal = (b.platform || "").toLowerCase();
                     break;
+                case "solutionType":
+                    aVal = (a.solutionType || "").toLowerCase();
+                    bVal = (b.solutionType || "").toLowerCase();
+                    break;
                 case "capStatus":
                     aVal = (a.capStatus || "").toLowerCase();
                     bVal = (b.capStatus || "").toLowerCase();
@@ -101,6 +105,18 @@ export const CapabilitiesList: React.FunctionComponent<ICapabilitiesListProps> =
             }
         },
         {
+            key: "solutionType",
+            name: "Solution Type",
+            fieldName: "solutionType",
+            minWidth: 140,
+            maxWidth: 210,
+            isResizable: true,
+            isSorted: sortColumnKey === "solutionType",
+            isSortedDescending,
+            onColumnClick,
+            onRender: (item: ICapabilityItem) => <Text>{item.solutionType || ""}</Text>
+        },
+        {
             key: "platform",
             name: "Platform",
             fieldName: "platform",
@@ -123,15 +139,6 @@ export const CapabilitiesList: React.FunctionComponent<ICapabilitiesListProps> =
             isSortedDescending,
             onColumnClick,
             onRender: (item: ICapabilityItem) => <Text>{item.hostingEnv || ""}</Text>
-        },
-        {
-            key: "connectivity",
-            name: "Connectivity",
-            fieldName: "connectivity",
-            minWidth: 120,
-            maxWidth: 180,
-            isResizable: true,
-            onRender: (item: ICapabilityItem) => <Text>{item.connectivity || ""}</Text>
         },
         {
             key: "contract",

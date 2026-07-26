@@ -186,6 +186,7 @@ const CapabilityOnePager: React.FC<ICapabilityOnePagerProps> = (props) => {
 
     const technicalInfoList: string[] = [
         capability.capStatus ? `Capability Status: ${capability.capStatus}` : "",
+        capability.solutionType ? `Solution Type: ${capability.solutionType}` : "",
         capability.platform ? `Platform: ${capability.platform}` : "",
         capability.hostingEnv ? `Hosting Environment: ${capability.hostingEnv}` : "",
         capability.connectivity ? `Connectivity: ${capability.connectivity}` : "",

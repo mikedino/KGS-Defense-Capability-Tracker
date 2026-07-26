@@ -20,11 +20,14 @@ export const serializeJsonTagField = <T>(tags?: T[]): string => {
 const buildListItemUrl = (siteUrl: string, listName: string, itemId: number): string =>
     `${siteUrl}/Lists/${encodeURIComponent(listName)}/DispForm.aspx?ID=${itemId}`;
 
+const buildLibraryItemUrl = (siteUrl: string, libraryName: string, itemId: number): string =>
+    `${siteUrl}/${encodeURIComponent(libraryName)}/Forms/DispForm.aspx?ID=${itemId}`;
+
 export const buildOppNetItemUrl = (itemId: number): string =>
     buildListItemUrl(Strings.Sites.oppNet.url, Strings.Sites.oppNet.lists.Opportunities, itemId);
 
 export const buildPastPerformanceItemUrl = (itemId: number): string =>
-    buildListItemUrl(Strings.Sites.proposals.url, Strings.Sites.proposals.lists.PastPerformance, itemId);
+    buildLibraryItemUrl(Strings.Sites.proposals.url, Strings.Sites.proposals.lists.PastPerformance, itemId);
 
 export const buildProposalItemUrl = (itemId: number): string =>
     buildListItemUrl(Strings.Sites.proposals.url, Strings.Sites.proposals.lists.Proposals, itemId);
