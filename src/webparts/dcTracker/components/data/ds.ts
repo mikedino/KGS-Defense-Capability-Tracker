@@ -1,7 +1,7 @@
 import { Web } from "gd-sprest-bs";
 import { WebPartContext } from '@microsoft/sp-webpart-base';
 import Strings, { setContext } from "../common/strings";
-import { ConfigType, ICapabilityItem, IConfigItem, IContractEndPointItem, IContractItem, IDocumentItem, IOpportunityItem, IPastPerformanceItem, IProposalItem } from "../common/props";
+import { ConfigType, ICapabilityItem, IConfigItem, IContractEndPointItem, IContractItem, IDocumentItem, IOgItem, IOpportunityItem, IPastPerformanceItem, IProposalItem } from "../common/props";
 import { formatError } from "../common/utils";
 import { ConfigService } from "../services/ConfigService";
 import { parseJsonTagField } from "../common/tagUtils";
@@ -36,6 +36,7 @@ export class DataSource {
                 await Promise.all([
                     this.getContracts(),
                     this.getCapabilities(),
+                    this.getOGs(),
                     this._jamisContractsLoaded ? Promise.resolve(this._jamisContracts) : this.getJamisContracts()
                 ]);
             }).then(() => {
@@ -137,7 +138,7 @@ export class DataSource {
     // Load the Contracts
     static contractQuerySelect: string[] = [
         "Id", "Title", "capability/Id", "capability/Title", "contractId", "customerContractCode", "customer",
-        "startDate", "endDate", "partner", "infoLink",
+        "startDate", "endDate", "partner", "infoLink", "ogTitle", "lobTitle",
         "contractPm/Id", "contractPm/Title", "contractPm/EMail", "contractPm/JobTitle", "contractPm/Department"
     ];
     static contractQueryExpand: string[] = ["capability", "contractPm"];
@@ -296,7 +297,7 @@ export class DataSource {
                 .Items()
                 .query({
                     GetAllItems: true,
-                    Select: ["Id", "Title", "field_19", "field_20", "field_35", "field_21", "field_23"],
+                    Select: ["Id", "Title", "field_19", "field_20", "field_35", "field_21", "field_23", "field_75"],
                     OrderBy: ["field_20"]
                 })
                 .execute(
@@ -306,6 +307,38 @@ export class DataSource {
                         resolve(this._jamisContracts);
                     },
                     (error) => reject(new Error(`Error fetching Jamis Contracts: ${formatError(error)}`))
+                );
+        });
+    }
+
+    //GET ALL OG's
+    private static _ogs: IOgItem[] = [];
+    static get OGs(): IOgItem[] { return this._ogs; }
+    static getOGs(): Promise<IOgItem[]> {
+        return new Promise<IOgItem[]>((resolve, reject) => {
+            this._ogs = [];
+
+            Web(Strings.Sites.orgLookups.url)
+                .Lists(Strings.Sites.orgLookups.lists.OGs)
+                .Items()
+                .query({
+                    GetAllItems: true,
+                    OrderBy: ["Title"],
+                    Filter: "isActive eq 1",
+                    Select: [
+                        "Id", "Title", "lob/Id",
+                        "lob/Title", "president/Id", "president/Title",
+                        "president/EMail", "ogType", "parentOg/Id",
+                        "parentOg/Title", "isActive", "isSelectable"
+                    ],
+                    Expand: ["lob", "president", "parentOg"]
+                })
+                .execute(
+                    (items) => {
+                        this._ogs = (items?.results ?? []) as unknown as IOgItem[];
+                        resolve(this._ogs);
+                    },
+                    (error) => reject(new Error(`Error fetching OGs: ${formatError(error)}`))
                 );
         });
     }

@@ -3,7 +3,7 @@
   "solution": {
     "name": "KGS Defense Capabilities Tracker",
     "id": "892091bb-900a-4918-887b-c53ce7b3352e",
-    "version": "1.0.0.2",
+    "version": "1.0.0.3",
     "includeClientSideAssets": true,
     "skipFeatureDeployment": true,
     "isDomainIsolated": false,
@@ -30,7 +30,7 @@
         "title": "kgs-dct Feature",
         "description": "The feature that activates elements of the kgs-dct solution.",
         "id": "c26c6504-0b9a-4569-847d-0f1aa75919f7",
-        "version": "1.0.0.2"
+        "version": "1.0.0.3"
       }
     ]
   },

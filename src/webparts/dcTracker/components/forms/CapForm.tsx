@@ -547,15 +547,24 @@ export const CapForm: React.FC<ICapFormProps> = ({ item, context, onSave, onDele
             key: "Title",
             name: "Contract Title",
             fieldName: "Title",
-            minWidth: 220,
+            minWidth: 150,
+            maxWidth: 220,
+            isResizable: true
+        },
+        {
+            key: "lobTitle",
+            name: "LOB",
+            fieldName: "lobTitle",
+            minWidth: 90,
+            maxWidth: 130,
             isResizable: true
         },
         {
             key: "customer",
             name: "Customer",
             fieldName: "customer",
-            minWidth: 120,
-            maxWidth: 180,
+            minWidth: 90,
+            maxWidth: 120,
             isResizable: true
         },
         {
@@ -571,8 +580,8 @@ export const CapForm: React.FC<ICapFormProps> = ({ item, context, onSave, onDele
             key: "contractPm",
             name: "PM",
             fieldName: "contractPm",
-            minWidth: 140,
-            maxWidth: 220,
+            minWidth: 100,
+            maxWidth: 140,
             isResizable: true,
             onRender: (contract: ICapabilityContractDraft) => contract.contractPm?.Title ?? ""
         },

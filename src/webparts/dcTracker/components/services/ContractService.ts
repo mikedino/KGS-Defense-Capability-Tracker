@@ -21,6 +21,8 @@ export class ContractService {
             contractId: item.contractId,
             customerContractCode: item.customerContractCode,
             customer: item.customer,
+            ogTitle: item.ogTitle,
+            lobTitle: item.lobTitle,
             startDate: ContractService.normalizeDateValue(item.startDate),
             endDate: ContractService.normalizeDateValue(item.endDate),
             contractPmId: item.contractPm?.Id ?? null,

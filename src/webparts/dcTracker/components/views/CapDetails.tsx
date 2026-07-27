@@ -38,7 +38,6 @@ interface CapDetailsProps {
     capability: ICapabilityItem;
     context: WebPartContext;
     onBack: () => void;
-    onHome: () => void;
     activeTab?: CapRouteTab;
     onTabChange?: (tab: CapRouteTab) => void;
     onNewCapability?: () => void;
@@ -63,7 +62,7 @@ export type DocFolderStatus = "unknown" | "ready" | "missing" | "error";
 const isCapabilityTab = (v: unknown): v is CapRouteTab =>
     v === "overview" || v === "supporting" || v === "tagging" || v === "contract" || v === "documentation";
 
-export const CapDetails: React.FC<CapDetailsProps> = ({ capability, context, onBack, onHome, activeTab = "overview", onTabChange, onNewCapability }) => {
+export const CapDetails: React.FC<CapDetailsProps> = ({ capability, context, onBack, activeTab = "overview", onTabChange, onNewCapability }) => {
 
     const [capState, setCapState] = useState<ICapabilityItem>(capability);
     const [showCapabilityForm, setShowCapabilityForm] = useState<boolean>(false);
@@ -559,7 +558,6 @@ export const CapDetails: React.FC<CapDetailsProps> = ({ capability, context, onB
                 {/* Back Button & Header */}
                 <Stack horizontal horizontalAlign="space-between" verticalAlign="center">
                     <CommandBarButton text="Back" iconProps={{ iconName: "NavigateBack" }} onClick={onBack} />
-                    <CommandBarButton text="Home" iconProps={{ iconName: "Home" }} onClick={onHome} />
                 </Stack>
                 <Stack className={styles.recordShell}>
                     <Stack horizontal horizontalAlign="space-between" verticalAlign="start" tokens={{ childrenGap: 16 }} className={styles.recordHeader}>

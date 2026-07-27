@@ -90,6 +90,18 @@ export const Configuration = Helper.SPConfig({
                     description: "Choices from config list"
                 },
                 {
+                    name: "ogTitle",
+                    title: "OG",
+                    type: Helper.SPCfgFieldType.Text,
+                    description: "Lookup: Jamis_Data_API => ContractEndPoint => OG"
+                },
+                {
+                    name: "lobTitle",
+                    title: "LOB",
+                    type: Helper.SPCfgFieldType.Text,
+                    description: "Derived from the selected OG lookup"
+                },
+                {
                     name: "startDate",
                     title: "Capability Start Date",
                     type: Helper.SPCfgFieldType.Date,
@@ -128,6 +140,8 @@ export const Configuration = Helper.SPConfig({
                         'capability',
                         'contractId',
                         'customerContractCode',
+                        'ogTitle',
+                        'lobTitle',
                         'customer',
                         'startDate',
                         'endDate',

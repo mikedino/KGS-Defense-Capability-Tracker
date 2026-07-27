@@ -87,6 +87,8 @@ export interface IContractItem {
     contractPm?: IPeoplePickerExtended; //KGS Contract Project Manager
     partner?: string; //config 
     infoLink?: string;
+    ogTitle?: string;
+    lobTitle?: string;
 }
 
 export interface ICapabilityContractDraft extends IContractItem {
@@ -108,7 +110,7 @@ export interface IContractEndPointItem {
     field_21: string; // Manager 1 Email (Project Manager)
     field_23: string; // Manager 1 Name (Project Manager)
     //field_73: string; // NAICS Code (e.g. 541519)
-    //field_75: string; // OG
+    field_75: string; // OG
     //field_16?: string; // Completion Date (NOT USED - EMPTY)
 }
 
@@ -161,4 +163,18 @@ export interface IProposalItem {
     TypeOfOpportunity?: string;
     Entity?: string;
     url?: string;
+}
+
+export interface IOgItem {
+  readonly Id: number;
+  Title: string;
+  president: IPeoplePicker;
+  lob: ILookupItem;
+  //CM: IPeoplePicker;
+  //SCM?: IPeoplePicker;
+  // Hierarchy
+  ogType: "OG" | "SrOG";
+  parentOg?: ILookupItem;   // set on child OGs; lookup resolves to the SrOG row (and its president)
+  isActive: boolean;
+  isSelectable: boolean;
 }

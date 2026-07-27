@@ -162,6 +162,7 @@ Key application areas:
 | Version | Date | Developer | Comments |
 | --- | --- | --- | --- |
 | 1.0.0.2 | July 25, 2026 | Landino | Initial release |
+| 1.0.0.3 | July 27, 2026 | Landino | Fix main search. Add OG and LOB to contract select/form/grid. Remove routes from capability item view |
 
 ## Disclaimer
 

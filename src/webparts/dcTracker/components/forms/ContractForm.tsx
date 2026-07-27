@@ -48,7 +48,9 @@ export const ContractForm: React.FC<IContractFormProps> = ({ item, context, onSa
         endDate: item?.endDate || "",
         contractPm: item?.contractPm?.Id ? item.contractPm : undefined,
         partner: item?.partner || "",
-        infoLink: item?.infoLink || ""
+        infoLink: item?.infoLink || "",
+        ogTitle: item?.ogTitle || "",
+        lobTitle: item?.lobTitle || ""
     });
     const [showDeleteConfirmation, setShowDeleteConfirmation] = React.useState(false);
     const [jamisSearchText, setJamisSearchText] = React.useState<Record<JamisLookupField, string>>({
@@ -63,6 +65,16 @@ export const ContractForm: React.FC<IContractFormProps> = ({ item, context, onSa
     const customerOptions = React.useMemo<IDropdownOption[]>(() => DataSource.getConfigOptions("customer"), []);
     const partnerOptions = React.useMemo<IDropdownOption[]>(() => DataSource.getConfigOptions("partner"), []);
     const jamisContracts = React.useMemo<IContractEndPointItem[]>(() => DataSource.JamisContracts ?? [], []);
+
+    const getOrgTitlesForJamisContract = (contract?: IContractEndPointItem): Pick<IContractItem, "ogTitle" | "lobTitle"> => {
+        const ogTitle = (contract?.field_75 ?? "").trim();
+        const ogItem = DataSource.OGs.find((og) => og.Title.toLowerCase() === ogTitle.toLowerCase());
+
+        return {
+            ogTitle,
+            lobTitle: ogItem?.lob?.Title ?? ""
+        };
+    };
 
     const getJamisValue = (contract: IContractEndPointItem, field: JamisLookupField): string => {
         switch (field) {
@@ -111,11 +123,14 @@ export const ContractForm: React.FC<IContractFormProps> = ({ item, context, onSa
     };
 
     const syncJamisContract = (contract: IContractEndPointItem): void => {
+        const orgTitles = getOrgTitlesForJamisContract(contract);
+
         setFormData((prev) => ({
             ...prev,
             contractId: contract.field_19 ?? "",
             Title: contract.field_20 ?? "",
-            customerContractCode: contract.field_35 ?? ""
+            customerContractCode: contract.field_35 ?? "",
+            ...orgTitles
         }));
         setJamisSearchText({
             contractId: contract.field_19 ?? "",
@@ -137,7 +152,23 @@ export const ContractForm: React.FC<IContractFormProps> = ({ item, context, onSa
 
     const handleJamisInput = (field: JamisLookupField, value: string): void => {
         setJamisSearchText((prev) => ({ ...prev, [field]: value }));
-        handleChange(field, value as IContractItem[typeof field]);
+
+        const normalizedValue = value.trim().toLowerCase();
+        const matchingContract = normalizedValue
+            ? jamisContracts.find((contract) => getJamisValue(contract, field).trim().toLowerCase() === normalizedValue)
+            : undefined;
+
+        if (matchingContract) {
+            syncJamisContract(matchingContract);
+            return;
+        }
+
+        setFormData((prev) => ({
+            ...prev,
+            [field]: value,
+            ogTitle: "",
+            lobTitle: ""
+        }));
     };
 
     const renderJamisOption = (activeField: JamisLookupField): ((option?: IComboBoxOption) => JSX.Element) => (option?: IComboBoxOption): JSX.Element => {
@@ -256,7 +287,21 @@ export const ContractForm: React.FC<IContractFormProps> = ({ item, context, onSa
                     />
                 </div>
 
-                <div className={styles.formGridTwo}>
+                <div className={styles.formGridThree}>
+                    <TextField
+                        label="OG"
+                        className={styles.formControl}
+                        value={formData.ogTitle ?? ""}
+                        readOnly
+                    />
+
+                    <TextField
+                        label="LOB"
+                        className={styles.formControl}
+                        value={formData.lobTitle ?? ""}
+                        readOnly
+                    />
+
                     <Dropdown
                         label="Customer"
                         className={styles.formControl}

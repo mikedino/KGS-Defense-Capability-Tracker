@@ -31,7 +31,7 @@ import { exportCapabilitiesBookPdf } from './export/ExportPdfWrapper';
 import { buildPdfBookItems } from './export/ExportPdfUtils';
 import { AppHeader } from './ui/AppHeader';
 import { HashRouter, useHistory, useLocation } from 'react-router-dom';
-import { CapRouteTab, getPathParts, routes, tabFromSlug } from './routing/routes';
+import { CapRouteTab, getPathParts, routes } from './routing/routes';
 
 const DctContent: React.FC<IDCTrackerProps> = (props) => {
   const history = useHistory();
@@ -106,7 +106,7 @@ const DctContent: React.FC<IDCTrackerProps> = (props) => {
   }, []);
 
   const handleSelectedCap = (capItem: ICapabilityItem): void => {
-    history.push(routes.cap(capItem.Id, "overview"));
+    history.push(routes.cap(capItem.Id));
   }
 
   const handleSelectedContract = (contractItem?: IContractItem): void => {
@@ -135,20 +135,50 @@ const DctContent: React.FC<IDCTrackerProps> = (props) => {
 
     if (!search) return capabilities;
 
+    // Main grid search intentionally checks only direct capability list fields.
+    // Nested people, lookup, and parsed tag objects are skipped here so typing cannot recurse
+    // into SharePoint/React object metadata or match hidden relationship data unexpectedly.
+    const searchableCapabilityFields: Array<keyof ICapabilityItem> = [
+      "Title",
+      "description",
+      "capabilities",
+      "link",
+      "capStatus",
+      "notes",
+      "solutionType",
+      "platform",
+      "hostingEnv",
+      "connectivity",
+      "compliance",
+      "licenseReqd",
+      "licenseReqmts",
+      "extensibility",
+      "serverReqmts",
+      "codeLanguage",
+      "backend",
+      "oppNetTagsJson",
+      "pastPerformanceTagsJson",
+      "proposalTagsJson",
+      "Modified"
+    ];
+
+    // Normalize direct field values before matching so rich-text fields and casing do not
+    // affect search results. Keep this helper primitive-only for easier debugging.
     const toSearchText = (value: unknown): string => {
       if (value === null || value === undefined) return "";
       if (typeof value === "string") return value.replace(/<[^>]*>/g, " ");
       if (typeof value === "number" || typeof value === "boolean") return String(value);
-      if (Array.isArray(value)) return value.map(toSearchText).join(" ");
-      if (typeof value === "object") {
-        return Object.values(value as Record<string, unknown>).map(toSearchText).join(" ");
-      }
-
       return "";
     };
 
     return capabilities.filter((cap) => {
-      return toSearchText(cap).toLowerCase().includes(search);
+      // Build one searchable string per capability from direct fields only.
+      const capabilitySearchText = searchableCapabilityFields
+        .map((fieldName) => toSearchText(cap[fieldName]))
+        .join(" ")
+        .toLowerCase();
+
+      return capabilitySearchText.includes(search);
     });
   }, [capabilities, searchTerm]);
 
@@ -249,13 +279,16 @@ const DctContent: React.FC<IDCTrackerProps> = (props) => {
       setShowContractForm(false);
 
       const capId = Number(parts[1]);
-      const tab = tabFromSlug(parts[2]);
-      setSelectedCapTab(tab);
+      const routeAction = (parts[2] ?? "").toLowerCase();
+      if (Number.isFinite(capId) && capId > 0 && routeAction !== "view") {
+        history.replace(routes.cap(capId));
+      }
 
       if (Number.isFinite(capId) && capId > 0) {
         const cap = capabilities.find(a => a.Id === capId);
         if (cap) {
           setSelectedCap(cap);
+          setSelectedCapTab("overview");
         } else if (capabilities.length) {
           setSelectedCap(undefined);
         }
@@ -466,9 +499,8 @@ const DctContent: React.FC<IDCTrackerProps> = (props) => {
           <CapDetails
             capability={selectedCap}
             onBack={handleCapDetailsBack}
-            onHome={() => history.push(routes.home)}
             activeTab={selectedCapTab}
-            onTabChange={(tab) => history.push(routes.cap(selectedCap.Id, tab))}
+            onTabChange={setSelectedCapTab}
             onNewCapability={handleNewCapabilityClick}
             context={props.context}
           />
@@ -544,21 +576,21 @@ const DctContent: React.FC<IDCTrackerProps> = (props) => {
                       options={capStatusOptions}
                       selectedKey={capStatusFilter}
                       onChange={(_, option) => setCapStatusFilter((option?.key as string) ?? "all")}
-                      styles={{ dropdown: { width: 150 } }}
+                      styles={{ dropdown: { width: 180 } }}
                     />
                     <Dropdown
                       placeholder="Filter by Solution Type"
                       options={solutionTypeOptions}
                       selectedKey={solutionTypeFilter}
                       onChange={(_, option) => setSolutionTypeFilter((option?.key as string) ?? "all")}
-                      styles={{ dropdown: { width: 220 } }}
+                      styles={{ dropdown: { width: 240 } }}
                     />
                     <Dropdown
                       placeholder="Filter by Platform"
                       options={platformOptions}
                       selectedKey={platformFilter}
                       onChange={(_, option) => setPlatformFilter((option?.key as string) ?? "all")}
-                      styles={{ dropdown: { width: 220 } }}
+                      styles={{ dropdown: { width: 160 } }}
                     />
 
                     <IconButton
@@ -647,7 +679,7 @@ const DctContent: React.FC<IDCTrackerProps> = (props) => {
                 setSelectedCap(capResponse);
                 setShowCapForm(false);
                 setShowSpinner(false);
-                history.push(routes.cap(capResponse.Id, "overview"));
+                history.push(routes.cap(capResponse.Id));
 
               } catch (error) {
                 const fError = formatError(error);

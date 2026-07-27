@@ -59,13 +59,15 @@ export const ContractInfo: React.FC<IContractInfoProps> = ({ contracts, isLoadin
 
                             <Stack horizontal wrap tokens={{ childrenGap: 24 }}>
                                 <FieldDisplay label="Customer Contract Code" value={contract.customerContractCode} />
+                                <FieldDisplay label="OG" value={contract.ogTitle} />
+                                <FieldDisplay label="LOB" value={contract.lobTitle} />
                                 <FieldDisplay label="Customer" value={contract.customer} />
                                 <FieldDisplay label="Relevant Partner Tag" value={contract.partner} />
                             </Stack>
 
                             <Stack horizontal wrap tokens={{ childrenGap: 24 }}>
-                                <FieldDisplay label="Capability Start Date" value={contract.startDate ? formatDate(contract.startDate) : undefined} />
-                                <FieldDisplay label="Capability End Date" value={contract.endDate ? formatDate(contract.endDate) : undefined} />
+                                <FieldDisplay label="Start" value={contract.startDate ? formatDate(contract.startDate) : undefined} />
+                                <FieldDisplay label="End" value={contract.endDate ? formatDate(contract.endDate) : undefined} />
                                 <Stack style={{ minWidth: 240, flexGrow: 1 }}>
                                     <Label>Contract Info Link/URL</Label>
                                     {contract.infoLink ? (

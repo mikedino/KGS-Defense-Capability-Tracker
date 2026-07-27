@@ -45,6 +45,8 @@ export const ContractsList: React.FunctionComponent<IContractsListProps> = ({ co
         (contract.contractId ?? "").toLowerCase().includes(search) ||
         (contract.customerContractCode ?? "").toLowerCase().includes(search) ||
         (contract.customer ?? "").toLowerCase().includes(search) ||
+        (contract.ogTitle ?? "").toLowerCase().includes(search) ||
+        (contract.lobTitle ?? "").toLowerCase().includes(search) ||
         (contract.contractPm?.Title ?? "").toLowerCase().includes(search) ||
         (contract.partner ?? "").toLowerCase().includes(search)
       );
@@ -70,6 +72,14 @@ export const ContractsList: React.FunctionComponent<IContractsListProps> = ({ co
         case "customer":
           aVal = (a.customer || "").toLowerCase();
           bVal = (b.customer || "").toLowerCase();
+          break;
+        case "ogTitle":
+          aVal = (a.ogTitle || "").toLowerCase();
+          bVal = (b.ogTitle || "").toLowerCase();
+          break;
+        case "lobTitle":
+          aVal = (a.lobTitle || "").toLowerCase();
+          bVal = (b.lobTitle || "").toLowerCase();
           break;
         case "startDate":
           aVal = a.startDate ? new Date(a.startDate).getTime() : 0;
@@ -110,8 +120,8 @@ export const ContractsList: React.FunctionComponent<IContractsListProps> = ({ co
       key: "title",
       name: "Contract Title",
       fieldName: "Title",
-      minWidth: 240,
-      maxWidth: 360,
+      minWidth: 180,
+      maxWidth: 260,
       isResizable: true,
       ...sortable("title"),
       onRender: (item: IContractItem) => (
@@ -125,27 +135,47 @@ export const ContractsList: React.FunctionComponent<IContractsListProps> = ({ co
       key: "customerContractCode",
       name: "Customer Contract Code",
       fieldName: "customerContractCode",
-      minWidth: 160,
-      maxWidth: 220,
+      minWidth: 130,
+      maxWidth: 170,
       isResizable: true,
       onRender: (item: IContractItem) => <Text>{item.customerContractCode || ""}</Text>
+    },
+    {
+      key: "ogTitle",
+      name: "OG",
+      fieldName: "ogTitle",
+      minWidth: 90,
+      maxWidth: 130,
+      isResizable: true,
+      ...sortable("ogTitle"),
+      onRender: (item: IContractItem) => <Text>{item.ogTitle || ""}</Text>
+    },
+    {
+      key: "lobTitle",
+      name: "LOB",
+      fieldName: "lobTitle",
+      minWidth: 90,
+      maxWidth: 130,
+      isResizable: true,
+      ...sortable("lobTitle"),
+      onRender: (item: IContractItem) => <Text>{item.lobTitle || ""}</Text>
     },
     {
       key: "customer",
       name: "Customer",
       fieldName: "customer",
-      minWidth: 110,
-      maxWidth: 160,
+      minWidth: 90,
+      maxWidth: 120,
       isResizable: true,
       ...sortable("customer"),
       onRender: (item: IContractItem) => <Text>{item.customer || ""}</Text>
     },
     {
       key: "startDate",
-      name: "Capability Start",
+      name: "Start",
       fieldName: "startDate",
-      minWidth: 110,
-      maxWidth: 130,
+      minWidth: 70,
+      maxWidth: 90,
       isResizable: true,
       headerClassName: styles.centeredHeader,
       className: styles.centeredColumn,
@@ -154,10 +184,10 @@ export const ContractsList: React.FunctionComponent<IContractsListProps> = ({ co
     },
     {
       key: "endDate",
-      name: "Capability End",
+      name: "End",
       fieldName: "endDate",
-      minWidth: 110,
-      maxWidth: 130,
+      minWidth: 70,
+      maxWidth: 90,
       isResizable: true,
       headerClassName: styles.centeredHeader,
       className: styles.centeredColumn,
@@ -168,8 +198,8 @@ export const ContractsList: React.FunctionComponent<IContractsListProps> = ({ co
       key: "contractPm",
       name: "Contract PM",
       fieldName: "contractPm",
-      minWidth: 160,
-      maxWidth: 220,
+      minWidth: 120,
+      maxWidth: 160,
       isResizable: true,
       ...sortable("contractPm"),
       onRender: (item: IContractItem) => <Text>{renderPerson(item.contractPm)}</Text>
@@ -178,8 +208,8 @@ export const ContractsList: React.FunctionComponent<IContractsListProps> = ({ co
       key: "partner",
       name: "Partner",
       fieldName: "partner",
-      minWidth: 120,
-      maxWidth: 180,
+      minWidth: 90,
+      maxWidth: 130,
       isResizable: true,
       onRender: (item: IContractItem) => <Text>{item.partner || ""}</Text>
     },
@@ -197,7 +227,7 @@ export const ContractsList: React.FunctionComponent<IContractsListProps> = ({ co
   return (
     <Stack tokens={{ childrenGap: 4 }} styles={{ root: { marginTop: 24 }}}>
       <SearchBox
-        placeholder="Search contract, customer, PM, or partner..."
+        placeholder="Search contract, customer, OG, LOB, PM, or partner..."
         value={searchTerm}
         onChange={(_, newValue) => setSearchTerm(newValue || "")}
         styles={{ root: { width: 460 } }}
