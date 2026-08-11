@@ -1085,6 +1085,7 @@ export const CapForm: React.FC<ICapFormProps> = ({ item, context, onSave, onDele
                     item={selectedContract}
                     context={context}
                     onSave={handleSaveContract}
+                    allowExistingContractSave
                     onDelete={() => {
                         if (selectedContract) {
                             handleRemoveContract(selectedContract);

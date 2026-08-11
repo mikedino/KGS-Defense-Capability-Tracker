@@ -35,12 +35,21 @@ export interface IContractFormProps {
     onDelete?: () => void;
     onCancel: () => void;
     children?: React.ReactNode;
+    allowExistingContractSave?: boolean;
 }
 
 type ContractLookupField = "contractId" | "Title" | "customerContractCode";
 const maxContractSourceResults = 20;
 
-export const ContractForm: React.FC<IContractFormProps> = ({ item, context, onSave, onDelete, onCancel, children }) => {
+export const ContractForm: React.FC<IContractFormProps> = ({
+    item,
+    context,
+    onSave,
+    onDelete,
+    onCancel,
+    children,
+    allowExistingContractSave = false
+}) => {
     const [formData, setFormData] = React.useState<IContractItem>({
         Id: item?.Id || 0,
         capability: { results: item?.capability?.results ?? [] },
@@ -313,7 +322,7 @@ export const ContractForm: React.FC<IContractFormProps> = ({ item, context, onSa
     const handleSave = (): void => {
         const duplicateContract = findDuplicateContract();
 
-        if (duplicateContract) {
+        if (duplicateContract && !allowExistingContractSave) {
             setFormMessage(
                 `A contract already exists with the same Contract Title, Customer Contract Code, or Contract ID: ${duplicateContract.Title || duplicateContract.contractId || "existing contract"}. Please use the existing contract instead.`
             );
