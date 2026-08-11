@@ -2,6 +2,7 @@ import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
 import { ICapabilityItem } from "../common/props";
 import { DataSource } from "../data/ds";
+import { ContractService } from "../services/ContractService";
 
 function setHyperlinkCell(cell: ExcelJS.Cell, text: string, href: string): void {
   cell.value = { text, hyperlink: href };
@@ -35,7 +36,7 @@ export async function exportToExcel(capabilities: ICapabilityItem[]): Promise<tr
 
   capabilities.forEach((cap) => {
     const relatedContracts = DataSource.Contracts
-      .filter((contract) => contract.capability?.Id === cap.Id)
+      .filter((contract) => ContractService.isLinkedToCapability(contract, cap.Id))
       .map((contract) => contract.Title)
       .filter(Boolean)
       .join(", ");

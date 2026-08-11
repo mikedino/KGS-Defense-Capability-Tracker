@@ -1,7 +1,7 @@
 import { Web } from "gd-sprest-bs";
 import { WebPartContext } from '@microsoft/sp-webpart-base';
 import Strings, { setContext } from "../common/strings";
-import { ConfigType, ICapabilityItem, IConfigItem, IContractEndPointItem, IContractItem, IDocumentItem, IOgItem, IOpportunityItem, IPastPerformanceItem, IProposalItem } from "../common/props";
+import { ConfigType, ICapabilityItem, ICMSContractItem, IConfigItem, IContractCapabilitySummaryItem, IContractDocumentItem, IContractEndPointItem, IContractItem, IContractSourceItem, IDocumentItem, IOgItem, IOpportunityItem, IPastPerformanceItem, IProposalItem } from "../common/props";
 import { formatError } from "../common/utils";
 import { ConfigService } from "../services/ConfigService";
 import { parseJsonTagField } from "../common/tagUtils";
@@ -36,9 +36,14 @@ export class DataSource {
                 await Promise.all([
                     this.getContracts(),
                     this.getCapabilities(),
+                    this.getContractCapabilitySummaries(),
                     this.getOGs(),
-                    this._jamisContractsLoaded ? Promise.resolve(this._jamisContracts) : this.getJamisContracts()
+                    this._jamisContractsLoaded ? Promise.resolve(this._jamisContracts) : this.getJamisContracts(),
+                    this._cmsContractsLoaded ? Promise.resolve(this._cmsContracts) : this.getCmsContracts()
                 ]);
+
+                // Rebuild the normalized search collection after regular refreshes without re-fetching cached source lists.
+                this.buildContractSources();
             }).then(() => {
                 this.initialized = true;
             }).catch((error) => {
@@ -138,12 +143,17 @@ export class DataSource {
     // Load the Contracts
     static contractQuerySelect: string[] = [
         "Id", "Title", "capability/Id", "capability/Title", "contractId", "customerContractCode", "customer",
-        "startDate", "endDate", "partner", "infoLink", "ogTitle", "lobTitle",
+        "startDate", "endDate", "partner", "infoLink", "ogTitle", "lobTitle", "contractType","contractValue",
         "contractPm/Id", "contractPm/Title", "contractPm/EMail", "contractPm/JobTitle", "contractPm/Department"
     ];
     static contractQueryExpand: string[] = ["capability", "contractPm"];
     private static _contracts: IContractItem[] = [];
     static get Contracts(): IContractItem[] { return this._contracts; }
+    // Refresh only DCTContracts so local duplicate checks stay current without reloading source contract systems.
+    static refreshContracts(): Promise<IContractItem[]> {
+        return this.getContracts();
+    }
+
     private static getContracts(): Promise<IContractItem[]> {
         return new Promise<IContractItem[]>((resolve, reject) => {
 
@@ -176,14 +186,51 @@ export class DataSource {
         });
     }
 
+    // Load contract-capability relationship summaries.
+    static contractCapabilitySummaryQuerySelect: string[] = [
+        "Id", "Title", "contract/Id", "contract/Title", "capability/Id", "capability/Title",
+        "summary", "poc/Id", "poc/Title", "poc/EMail", "poc/JobTitle", "poc/Department"
+    ];
+    static contractCapabilitySummaryQueryExpand: string[] = ["contract", "capability", "poc"];
+    private static _contractCapabilitySummaries: IContractCapabilitySummaryItem[] = [];
+    static get ContractCapabilitySummaries(): IContractCapabilitySummaryItem[] { return this._contractCapabilitySummaries; }
+    static refreshContractCapabilitySummaries(): Promise<IContractCapabilitySummaryItem[]> {
+        return this.getContractCapabilitySummaries();
+    }
+
+    static getContractCapabilitySummary(contractId: number, capabilityId: number): IContractCapabilitySummaryItem | undefined {
+        return this._contractCapabilitySummaries.find((item) =>
+            item.contract?.Id === contractId && item.capability?.Id === capabilityId
+        );
+    }
+
+    private static getContractCapabilitySummaries(): Promise<IContractCapabilitySummaryItem[]> {
+        return new Promise<IContractCapabilitySummaryItem[]>((resolve, reject) => {
+            this._contractCapabilitySummaries = [];
+
+            Web().Lists(Strings.Sites.main.lists.ContractCapabilitySummary).Items().query({
+                GetAllItems: true,
+                Select: this.contractCapabilitySummaryQuerySelect,
+                OrderBy: ["Title"],
+                Expand: this.contractCapabilitySummaryQueryExpand
+            }).execute(
+                (items) => {
+                    this._contractCapabilitySummaries = (items?.results ?? []) as unknown as IContractCapabilitySummaryItem[];
+                    resolve(this._contractCapabilitySummaries);
+                },
+                (error) => reject(new Error(`Error fetching Contract Capability Summaries: ${formatError(error)}`))
+            );
+        });
+    }
+
     // Load the Capabilities
     static capabilityQuerySelect: string[] = [
         "Id", "Title", "description", "capabilities", "link", "capStatus", "notes",
         "solutionType", "platform", "hostingEnv", "connectivity", "compliance", "licenseReqd",
         "licenseReqmts", "extensibility", "serverReqmts", "codeLanguage", "backend",
         "oppNetTagsJson", "pastPerformanceTagsJson", "proposalTagsJson", "Modified",
-        "primaryPoc/Id", "primaryPoc/Title", "primaryPoc/EMail", "primaryPoc/JobTitle", "primaryPoc/Department",
-        "stakeholders/Id", "stakeholders/Title", "stakeholders/EMail", "stakeholders/JobTitle", "stakeholders/Department",
+        "primaryPoc/Id", "primaryPoc/Title", "primaryPoc/EMail",
+        "stakeholders/Id", "stakeholders/Title", "stakeholders/EMail",
         "Author/Title", "Author/EMail", "Author/Id"
     ]
     static capabilityQueryExpand: string[] = ["primaryPoc", "stakeholders", "Author"];
@@ -252,6 +299,36 @@ export class DataSource {
         });
     }
 
+    // GET CONTRACT DOCUMENTS BY CONTRACT ITEM
+    static getDocumentsByContract(contractId: number): Promise<IContractDocumentItem[]> {
+
+        return new Promise<IContractDocumentItem[]>((resolve, reject) => {
+
+            // Load only documents linked to the selected DCTContracts item.
+            Web().Lists(Strings.Sites.main.lists.ContractDocuments).Items().query({
+                Select: ["File_x0020_Type", "UniqueId", "Id", "ServerRedirectedEmbedUrl", "EncodedAbsUrl", "FileLeafRef", "contract/Id",
+                    "Modified", "Editor/Id", "Editor/EMail", "Editor/Title", "cdocType", "Title"],
+                Filter: `contract/Id eq ${contractId}`,
+                Expand: ["contract", "Editor"]
+            }).execute(
+                // Success
+                items => {
+                    if (items?.results?.length) {
+                        const docs = items.results as unknown as IContractDocumentItem[];
+                        resolve(docs);
+                    } else {
+                        // Resolve with an empty array so callers can render the empty state.
+                        resolve([]);
+                    }
+                },
+                // Error
+                (error) => {
+                    reject(new Error(`Error getting Contract Documents: ${formatError(error)}`));
+                }
+            )
+        });
+    }
+
     // GET ONLY SCREENSHOTS / DOCUMENTS FOR PDF EXPORT
     static getScreenshotsForBook(): Promise<IDocumentItem[]> {
 
@@ -289,9 +366,6 @@ export class DataSource {
         return new Promise<IContractEndPointItem[]>((resolve, reject) => {
             this._jamisContracts = [];
 
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-
             Web(Strings.Sites.jamis.url)
                 .Lists(Strings.Sites.jamis.lists.ContractEP)
                 .Items()
@@ -309,6 +383,123 @@ export class DataSource {
                     (error) => reject(new Error(`Error fetching Jamis Contracts: ${formatError(error)}`))
                 );
         });
+    }
+
+    //GET CONTRACTS FROM CMS SITE
+    private static _cmsContracts: ICMSContractItem[] = [];
+    private static _cmsContractsLoaded: boolean = false;
+    static get CmsContracts(): ICMSContractItem[] { return this._cmsContracts; }
+    static getCmsContracts(): Promise<ICMSContractItem[]> {
+        return new Promise<ICMSContractItem[]>((resolve, reject) => {
+            this._cmsContracts = [];
+
+            Web(Strings.Sites.cms.url)
+                .Lists(Strings.Sites.cms.lists.Contracts)
+                .Items()
+                .query({
+                    GetAllItems: true,
+                    Select: [
+                        "Id", "Title", "ContractNumber", "ProjectID", "OperatingGroup",
+                        "ProjectManager/Id", "ProjectManager/Title", "ProjectManager/EMail"
+                    ],
+                    Expand: ["ProjectManager"],
+                    OrderBy: ["Title"]
+                })
+                .execute(
+                    (items) => {
+                        this._cmsContracts = (items?.results ?? []) as unknown as ICMSContractItem[];
+                        this._cmsContractsLoaded = true;
+                        resolve(this._cmsContracts);
+                    },
+                    (error) => reject(new Error(`Error fetching CMS Contracts: ${formatError(error)}`))
+                );
+        });
+    }
+
+    // Store the normalized, de-duplicated contract source rows used by the contract form lookups.
+    private static _contractSources: IContractSourceItem[] = [];
+    static get ContractSources(): IContractSourceItem[] { return this._contractSources; }
+
+    // Normalize text before comparing source-list rows so casing, whitespace, and punctuation are consistent.
+    private static getContractSourceKey(value?: string): string {
+        return (value ?? "").trim().toLowerCase().replace(/\s+/g, " ");
+    }
+
+    // Build every comparison key that should count as the same contract across source systems.
+    private static getContractSourceKeys(source: Pick<IContractSourceItem, "Title" | "customerContractCode">): string[] {
+        return [
+            source.customerContractCode ? `code:${DataSource.getContractSourceKey(source.customerContractCode)}` : "",
+            source.Title ? `title:${DataSource.getContractSourceKey(source.Title)}` : ""
+        ].filter(Boolean);
+    }
+
+    // Convert a Jamis endpoint row into the common source shape consumed by ContractForm.
+    private static normalizeJamisContractSource(contract: IContractEndPointItem): IContractSourceItem {
+        const ogTitle = (contract.field_75 ?? "").trim();
+        const ogItem = DataSource.OGs.find((og) => og.Title.toLowerCase() === ogTitle.toLowerCase());
+
+        return {
+            source: "jamis",
+            sourceId: contract.Id,
+            sourceLabel: "JAMIS",
+            contractId: contract.field_19 ?? "",
+            Title: contract.field_20 ?? "",
+            customerContractCode: contract.field_35 ?? "",
+            projectManagerEmail: contract.field_21 ?? "",
+            projectManagerName: contract.field_23 ?? "",
+            ogTitle,
+            lobTitle: ogItem?.lob?.Title ?? ""
+        };
+    }
+
+    // Convert a CMS contract row into the same source shape while preserving CMS-specific identifiers.
+    private static normalizeCmsContractSource(contract: ICMSContractItem): IContractSourceItem {
+        // CMS stores the OG title directly, so use the same OG lookup table as Jamis to derive LOB.
+        const ogTitle = (contract.OperatingGroup ?? "").trim();
+        const ogItem = DataSource.OGs.find((og) => og.Title.toLowerCase() === ogTitle.toLowerCase());
+
+        return {
+            source: "cms",
+            sourceId: contract.Id,
+            sourceLabel: "CMS",
+            contractId: contract.ProjectID ?? "",
+            Title: contract.Title ?? "",
+            customerContractCode: contract.ContractNumber ?? "",
+            projectManager: contract.ProjectManager?.Id ? {
+                Id: contract.ProjectManager.Id,
+                EMail: contract.ProjectManager.EMail,
+                Title: contract.ProjectManager.Title
+            } : undefined,
+            projectManagerEmail: contract.ProjectManager?.EMail ?? "",
+            projectManagerName: contract.ProjectManager?.Title ?? "",
+            ogTitle,
+            lobTitle: ogItem?.lob?.Title ?? ""
+        };
+    }
+
+    // Add a normalized source row when none of its contract identity keys have been seen yet.
+    private static addContractSource(sourceMap: Map<string, IContractSourceItem>, source: IContractSourceItem): void {
+        const keys = DataSource.getContractSourceKeys(source);
+        if (!keys.length) return;
+        if (keys.some((key) => sourceMap.has(key))) return;
+
+        keys.forEach((key) => sourceMap.set(key, source));
+    }
+
+    // Merge Jamis and CMS into one searchable collection, giving Jamis priority when duplicates exist.
+    private static buildContractSources(): void {
+        const sourceMap = new Map<string, IContractSourceItem>();
+
+        this._jamisContracts
+            .map((contract) => DataSource.normalizeJamisContractSource(contract))
+            .forEach((source) => DataSource.addContractSource(sourceMap, source));
+
+        this._cmsContracts
+            .map((contract) => DataSource.normalizeCmsContractSource(contract))
+            .forEach((source) => DataSource.addContractSource(sourceMap, source));
+
+        this._contractSources = Array.from(new Set(sourceMap.values()))
+            .sort((a, b) => (a.Title ?? "").localeCompare(b.Title ?? ""));
     }
 
     //GET ALL OG's

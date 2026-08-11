@@ -1,45 +1,30 @@
 import * as React from "react";
-import { IColumn, SearchBox, SelectionMode, Stack, Text } from "@fluentui/react";
+import { IColumn, Link, PrimaryButton, SearchBox, SelectionMode, Stack, Text } from "@fluentui/react";
 import PaginatedDetailsList from "../ui/PaginatedDetailsList";
 import { formatDate } from "../common/utils";
 import styles from "../Dct.module.scss";
+import { ContractService } from "../services/ContractService";
 
 import type { IContractItem, IPeoplePickerExtended } from "../common/props";
 
 interface IContractsListProps {
   contracts: IContractItem[];
   onSelectContract: (contract: IContractItem) => void;
+  onNewContract?: () => void;
 }
 
 const renderPerson = (p?: IPeoplePickerExtended): string => p?.Title ?? "";
 
-export const ContractsList: React.FunctionComponent<IContractsListProps> = ({ contracts, onSelectContract }) => {
+export const ContractsList: React.FunctionComponent<IContractsListProps> = ({ contracts, onSelectContract, onNewContract }) => {
   const [searchTerm, setSearchTerm] = React.useState<string>("");
   const [sortColumnKey, setSortColumnKey] = React.useState<string | null>("title");
   const [isSortedDescending, setIsSortedDescending] = React.useState<boolean>(false);
 
-  const uniqueContracts = React.useMemo(() => {
-    const contractMap = new Map<string, IContractItem & { capabilityCount?: number }>();
-
-    for (const contract of contracts) {
-      const key = contract.contractId || contract.customerContractCode || contract.Title || contract.Id.toString();
-      const existing = contractMap.get(key);
-
-      if (existing) {
-        existing.capabilityCount = (existing.capabilityCount ?? 1) + 1;
-      } else {
-        contractMap.set(key, { ...contract, capabilityCount: 1 });
-      }
-    }
-
-    return Array.from(contractMap.values());
-  }, [contracts]);
-
   const filteredContracts = React.useMemo(() => {
     const search = searchTerm.trim().toLowerCase();
-    if (!search) return uniqueContracts;
+    if (!search) return contracts;
 
-    return uniqueContracts.filter((contract) => {
+    return contracts.filter((contract) => {
       return (
         (contract.Title ?? "").toLowerCase().includes(search) ||
         (contract.contractId ?? "").toLowerCase().includes(search) ||
@@ -48,10 +33,13 @@ export const ContractsList: React.FunctionComponent<IContractsListProps> = ({ co
         (contract.ogTitle ?? "").toLowerCase().includes(search) ||
         (contract.lobTitle ?? "").toLowerCase().includes(search) ||
         (contract.contractPm?.Title ?? "").toLowerCase().includes(search) ||
-        (contract.partner ?? "").toLowerCase().includes(search)
+        (contract.partner ?? "").toLowerCase().includes(search) ||
+        ContractService.getCapabilityLookups(contract).some((capability) =>
+          (capability.Title ?? "").toLowerCase().includes(search)
+        )
       );
     });
-  }, [uniqueContracts, searchTerm]);
+  }, [contracts, searchTerm]);
 
   const sortedContracts = React.useMemo(() => {
     if (!sortColumnKey) return filteredContracts;
@@ -126,7 +114,16 @@ export const ContractsList: React.FunctionComponent<IContractsListProps> = ({ co
       ...sortable("title"),
       onRender: (item: IContractItem) => (
         <Stack>
-          <Text variant="medium" style={{ fontWeight: 600 }}>{item.Title}</Text>
+          <Link
+            className={styles.listTitleLink}
+            onClick={(ev) => {
+              ev?.preventDefault();
+              ev?.stopPropagation();
+              onSelectContract(item);
+            }}
+          >
+            {item.Title}
+          </Link>
           <Text variant="small">{item.contractId || ""}</Text>
         </Stack>
       )
@@ -220,18 +217,28 @@ export const ContractsList: React.FunctionComponent<IContractsListProps> = ({ co
       minWidth: 90,
       maxWidth: 110,
       isResizable: false,
-      onRender: (item: IContractItem & { capabilityCount?: number }) => <Text>{item.capabilityCount ?? 1}</Text>
+      onRender: (item: IContractItem) => <Text>{ContractService.getCapabilityLookups(item).length}</Text>
     }
   ];
 
   return (
     <Stack tokens={{ childrenGap: 4 }} styles={{ root: { marginTop: 24 }}}>
-      <SearchBox
-        placeholder="Search contract, customer, OG, LOB, PM, or partner..."
-        value={searchTerm}
-        onChange={(_, newValue) => setSearchTerm(newValue || "")}
-        styles={{ root: { width: 460 } }}
-      />
+      <Stack horizontal horizontalAlign="space-between" verticalAlign="center" tokens={{ childrenGap: 12 }}>
+        <SearchBox
+          placeholder="Search contract, customer, OG, LOB, PM, or partner..."
+          value={searchTerm}
+          onChange={(_, newValue) => setSearchTerm(newValue || "")}
+          styles={{ root: { width: 460, maxWidth: "100%" } }}
+        />
+
+        {onNewContract && (
+          <PrimaryButton
+            text="New Contract"
+            iconProps={{ iconName: "Add" }}
+            onClick={onNewContract}
+          />
+        )}
+      </Stack>
 
       <PaginatedDetailsList
         items={sortedContracts}

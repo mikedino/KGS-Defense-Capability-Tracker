@@ -2,6 +2,7 @@ import { WebPartContext } from "@microsoft/sp-webpart-base";
 import { SPHttpClientResponse, SPHttpClient } from "@microsoft/sp-http";
 import { ICapabilityItem, IContractItem, IDocumentItem } from "../common/props";
 import { ICapabilityBookItem } from "./PDFBook";
+import { ContractService } from "../services/ContractService";
 
 const getImageMimeTypeFromFileType = (
     fileType?: string
@@ -113,7 +114,7 @@ export const buildPdfBookItems = async (
     const items: ICapabilityBookItem[] = [];
 
     for (const app of capabilities) {
-        const contract: IContractItem | undefined = contracts.find((item) => item.capability?.Id === app.Id);
+        const contract: IContractItem | undefined = contracts.find((item) => ContractService.isLinkedToCapability(item, app.Id));
 
         const screenshotDoc: IDocumentItem | undefined = screenshotByCapability.get(app.Id);
         let screenshotBinary: string | undefined;

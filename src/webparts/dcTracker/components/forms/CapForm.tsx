@@ -29,6 +29,7 @@ import styles from "../Dct.module.scss";
 import { ContractForm } from "./ContractForm";
 import { formatDate } from "../common/utils";
 import { buildOppNetItemUrl, buildPastPerformanceItemUrl, buildProposalItemUrl } from "../common/tagUtils";
+import { ContractService } from "../services/ContractService";
 
 export interface ICapFormProps {
     item?: ICapabilityItem;
@@ -70,13 +71,18 @@ export const CapForm: React.FC<ICapFormProps> = ({ item, context, onSave, onDele
     const [capContracts, setCapContracts] = React.useState<ICapabilityContractDraft[]>(
         () => item?.Id
             ? DataSource.Contracts
-                .filter((contract) => contract.capability?.Id === item.Id)
-                .map((contract) => ({ ...contract }))
+                .filter((contract) => ContractService.isLinkedToCapability(contract, item.Id))
+                .map((contract) => ({
+                    ...contract,
+                    capabilitySummary: DataSource.getContractCapabilitySummary(contract.Id, item.Id)?.summary ?? "",
+                    capabilitySummaryPoc: DataSource.getContractCapabilitySummary(contract.Id, item.Id)?.poc
+                }))
             : []
     );
     const [deletedContractIds, setDeletedContractIds] = React.useState<number[]>([]);
     const [showContractDialog, setShowContractDialog] = React.useState<boolean>(false);
     const [selectedContract, setSelectedContract] = React.useState<ICapabilityContractDraft | undefined>(undefined);
+    const [selectedContractSummary, setSelectedContractSummary] = React.useState<string>("");
 
     type CapStatusType = ICapabilityItem["capStatus"];
     type SolutionType = ICapabilityItem["solutionType"];
@@ -502,15 +508,17 @@ export const CapForm: React.FC<ICapFormProps> = ({ item, context, onSave, onDele
         `new-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
     const getContractRowKey = (contract: ICapabilityContractDraft): string =>
-        contract.Id > 0 ? `id-${contract.Id}` : contract.tempId ?? "";
+        ContractService.getContractIdentityKey(contract) || (contract.tempId ?? "");
 
     const handleAddContract = (): void => {
         setSelectedContract(undefined);
+        setSelectedContractSummary("");
         setShowContractDialog(true);
     };
 
     const handleEditContract = (contract: ICapabilityContractDraft): void => {
         setSelectedContract(contract);
+        setSelectedContractSummary(contract.capabilitySummary ?? "");
         setShowContractDialog(true);
     };
 
@@ -526,19 +534,29 @@ export const CapForm: React.FC<ICapFormProps> = ({ item, context, onSave, onDele
     const handleSaveContract = (contract: IContractItem): void => {
         const nextContract: ICapabilityContractDraft = {
             ...contract,
+            capabilitySummary: selectedContractSummary,
+            capabilitySummaryPoc: selectedContract?.capabilitySummaryPoc,
             tempId: selectedContract?.tempId ?? createTempContractId()
         };
 
         if (selectedContract) {
             const selectedKey = getContractRowKey(selectedContract);
             setCapContracts((prev) =>
-                prev.map((row) => getContractRowKey(row) === selectedKey ? nextContract : row)
+                prev
+                    .filter((row) => getContractRowKey(row) === selectedKey || !ContractService.contractsMatch(row, nextContract))
+                    .map((row) => getContractRowKey(row) === selectedKey ? nextContract : row)
             );
         } else {
-            setCapContracts((prev) => [...prev, nextContract]);
+            setCapContracts((prev) => {
+                const existing = ContractService.findMatchingContract(nextContract, prev);
+                return existing
+                    ? prev.map((row) => ContractService.contractsMatch(row, nextContract) ? nextContract : row)
+                    : [...prev, nextContract];
+            });
         }
 
         setSelectedContract(undefined);
+        setSelectedContractSummary("");
         setShowContractDialog(false);
     };
 
@@ -547,8 +565,8 @@ export const CapForm: React.FC<ICapFormProps> = ({ item, context, onSave, onDele
             key: "Title",
             name: "Contract Title",
             fieldName: "Title",
-            minWidth: 150,
-            maxWidth: 220,
+            minWidth: 160,
+            maxWidth: 300,
             isResizable: true
         },
         {
@@ -568,10 +586,19 @@ export const CapForm: React.FC<ICapFormProps> = ({ item, context, onSave, onDele
             isResizable: true
         },
         {
+            key: "startDate",
+            name: "Start Date",
+            fieldName: "startDate",
+            minWidth: 70,
+            maxWidth: 120,
+            isResizable: true,
+            onRender: (contract: ICapabilityContractDraft) => contract.startDate ? formatDate(contract.startDate) : ""
+        },
+        {
             key: "endDate",
             name: "End Date",
             fieldName: "endDate",
-            minWidth: 90,
+            minWidth: 70,
             maxWidth: 120,
             isResizable: true,
             onRender: (contract: ICapabilityContractDraft) => contract.endDate ? formatDate(contract.endDate) : ""
@@ -1063,13 +1090,34 @@ export const CapForm: React.FC<ICapFormProps> = ({ item, context, onSave, onDele
                             handleRemoveContract(selectedContract);
                         }
                         setSelectedContract(undefined);
+                        setSelectedContractSummary("");
                         setShowContractDialog(false);
                     }}
                     onCancel={() => {
                         setSelectedContract(undefined);
+                        setSelectedContractSummary("");
                         setShowContractDialog(false);
                     }}
-                />
+                >
+                    <section className={styles.formSection}>
+                        <div className={styles.formSectionHeader}>
+                            <div>
+                                <h3>Capability Summary</h3>
+                                <p>Contract-specific notes about how this capability is used on this contract</p>
+                            </div>
+                        </div>
+
+                        <TextField
+                            label="Capability Summary"
+                            className={styles.formControl}
+                            value={selectedContractSummary}
+                            multiline
+                            rows={5}
+                            resizable={false}
+                            onChange={(_, value) => setSelectedContractSummary(value ?? "")}
+                        />
+                    </section>
+                </ContractForm>
             </Dialog>
         </>
     );

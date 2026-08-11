@@ -24,5 +24,7 @@ export const configSeedItems: IConfigItem[] = [
   ...seed("hostingEnvironment", ["SharePoint Online", "Azure App Service", "Azure Function", "Dataverse", "Power Platform", "On-Premises Server", "Client Device", "SaaS Vendor Hosted", "Hybrid"]),
   ...seed("platform", ["SharePoint", "Power Platform", "Azure", "Microsoft 365", "Standalone", "AWS", "On-Premises", "Hybrid Cloud"]),
   ...seed("solutionType", ["SPFx", "Power App", "Power Automate Flow", "Power BI Report/Dashboard", "Web App", "AI Solution", "Mobile App", "Desktop App", "SharePoint Site/Solution", "Data Integration", "API/Service", "Automation", "Reporting/Analytics", "Document/Knowledge Management", "Workflow/Application Modernization"]),
-  ...seed("documentType", ["Screenshot", "Technical", "Requirements", "Testing", "508 Compliance", "User Guides/User Manuals", "FAQ"])
+  ...seed("documentType", ["Screenshot", "Technical", "Requirements", "Testing", "508 Compliance", "User Guides/User Manuals", "FAQ"]),
+  ...seed("cdocType", ["PWS", "RFI", "RFP", "SOW", "Past Performance"]),
+  ...seed("contractType", ["Cost Plus/Reimbursable", "FFP/LOE", "Hybrid", "T&M", "LH"])
 ];

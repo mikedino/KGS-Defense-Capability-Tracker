@@ -42,21 +42,33 @@ export const formatError = (error: unknown): string => {
  * @param currency - The currency code (default is 'USD').
  * @returns A formatted currency string or an empty string if the input is invalid.
  */
-export const formatCurrency = (
-    amount: number | string,
-    locale: string = 'en-US',
-    currency: string = 'USD'
-): string => {
-    const number = parseFloat(amount as string);
-    return isNaN(number)
-        ? ''
-        : new Intl.NumberFormat(locale, {
-            style: 'currency',
-            currency,
-            minimumFractionDigits: 0, // Ensures no cents are displayed
-            maximumFractionDigits: 0, // Ensures no cents are displayed
-        }).format(number);
+export const parseCurrencyValue = (amount?: number | string): number => {
+    if (amount === undefined) return 0;
+    if (typeof amount !== "number" && typeof amount !== "string") return 0;
+    if (amount === "") return 0;
+    const numericValue = typeof amount === "number"
+        ? amount
+        : Number(String(amount).replace(/[^0-9.-]/g, ""));
+
+    return Number.isFinite(numericValue) ? numericValue : 0;
 };
+
+export const formatCurrency = (
+    amount?: number | string,
+    locale: string = "en-US",
+    currency: string = "USD"
+): string => {
+    const number = parseCurrencyValue(amount);
+    return new Intl.NumberFormat(locale, {
+        style: "currency",
+        currency,
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    }).format(number);
+};
+
+export const formatCurrencyInputValue = (amount?: number | string): string =>
+    formatCurrency(amount).replace(/^\$/, "");
 
 
 /**

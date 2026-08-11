@@ -1,92 +1,78 @@
 import * as React from "react";
-import { Label, Link, Stack, Text } from "@fluentui/react";
-import { IContractItem, IPeoplePickerExtended } from "../../common/props";
+import { Stack, Text } from "@fluentui/react";
+import { ICapabilityItem, IContractDocumentItem, IContractItem } from "../../common/props";
+import { formatError } from "../../common/utils";
+import { DataSource } from "../../data/ds";
 import styles from "../../Dct.module.scss";
-import { formatDate } from "../../common/utils";
-import { PeoplePersona } from "../../ui/Persona";
+import { ContractDetailCard } from "../contracts/ContractDetailCard";
+import { ContractDocumentsPanel } from "../contracts/ContractDocumentsPanel";
 
 export interface IContractInfoProps {
+    capability: ICapabilityItem;
     contracts: IContractItem[];
     isLoading?: boolean;
 }
 
-const contractDetailsCardStyle: React.CSSProperties = {
-    flex: "1 1 620px",
-    minWidth: 0
-};
+export const ContractInfo: React.FC<IContractInfoProps> = ({ capability, contracts, isLoading }) => {
+    const [contractDocumentsById, setContractDocumentsById] = React.useState<Map<number, IContractDocumentItem[]>>(new Map());
 
-const FieldDisplay: React.FC<{ label: string; value?: string }> = ({ label, value }) => (
-    <Stack style={{ minWidth: 180, flexGrow: 1 }}>
-        <Label>{label}</Label>
-        <Text>{value || "—"}</Text>
-    </Stack>
-);
+    React.useEffect(() => {
+        if (!contracts.length) {
+            setContractDocumentsById(new Map());
+            return;
+        }
 
-const PersonDisplay: React.FC<{ label: string; person?: IPeoplePickerExtended }> = ({ label, person }) => (
-    <Stack style={{ minWidth: 220, flexGrow: 1 }} tokens={{ childrenGap: 4 }}>
-        <Label>{label}</Label>
-        {person?.Id ? (
-            <PeoplePersona person={person} showDetails={true} fallbackText="Not assigned" />
-        ) : (
-            <Text styles={{ root: { color: "gray", fontStyle: "italic" } }}>Not assigned</Text>
-        )}
-    </Stack>
-);
+        // Load documents for each visible supporting contract so the shared detail card can show its document list.
+        Promise.all(
+            contracts.map((contract) =>
+                DataSource.getDocumentsByContract(contract.Id)
+                    .then((documents) => ({ contractId: contract.Id, documents }))
+            )
+        )
+            .then((results) => {
+                const nextDocumentsById = new Map<number, IContractDocumentItem[]>();
+                results.forEach((result) => nextDocumentsById.set(result.contractId, result.documents));
+                setContractDocumentsById(nextDocumentsById);
+            })
+            .catch((error) => console.error(`Error loading supporting contract documents: ${formatError(error)}`));
+    }, [contracts]);
 
-export const ContractInfo: React.FC<IContractInfoProps> = ({ contracts, isLoading }) => {
     return (
-        <Stack tokens={{ childrenGap: 16 }}>
-            <Stack horizontal wrap tokens={{ childrenGap: 16 }} styles={{ root: { alignItems: "stretch" } }}>
-                <Stack tokens={{ childrenGap: 16 }} className={styles.detailCard} style={contractDetailsCardStyle}>
-                    {isLoading && (
-                        <Text styles={{ root: { color: "gray", fontStyle: "italic" } }}>
-                            Loading contract details...
-                        </Text>
+        <Stack tokens={{ childrenGap: 16 }} className={styles.contractDetailList}>
+            {isLoading && (
+                <Text styles={{ root: { color: "gray", fontStyle: "italic" } }}>
+                    Loading contract details...
+                </Text>
+            )}
+
+            {!isLoading && !contracts.length && (
+                <Text styles={{ root: { color: "gray", fontStyle: "italic" } }}>
+                    No contracts assigned.
+                </Text>
+            )}
+
+            {!isLoading && contracts.map((contract, index) => (
+                <ContractDetailCard
+                    key={contract.Id}
+                    contract={contract}
+                    eyebrow={`Contract ${index + 1} of ${contracts.length}`}
+                    documentsContent={(
+                        <ContractDocumentsPanel
+                            documents={contractDocumentsById.get(contract.Id) ?? []}
+                            canEdit={false}
+                            showAddButton={false}
+                        />
                     )}
-
-                    {!isLoading && !contracts.length && (
-                        <Text styles={{ root: { color: "gray", fontStyle: "italic" } }}>
-                            No contracts assigned.
-                        </Text>
+                    footerContent={(
+                        <div className={styles.contractRelationshipSummary}>
+                            <span className={styles.contractRelationshipSummaryTitle}>Capability Summary</span>
+                            <span className={styles.contractRelationshipSummaryText}>
+                                {DataSource.getContractCapabilitySummary(contract.Id, capability.Id)?.summary || "No contract-specific summary has been added."}
+                            </span>
+                        </div>
                     )}
-
-                    {!isLoading && contracts.map((contract) => (
-                        <Stack key={contract.Id} tokens={{ childrenGap: 16 }} styles={{ root: { borderBottom: "1px solid #edebe9", paddingBottom: 16 } }}>
-                            <Stack horizontal wrap tokens={{ childrenGap: 24 }}>
-                                <FieldDisplay label="Contract ID" value={contract.contractId} />
-                                <FieldDisplay label="Contract Title" value={contract.Title} />
-                            </Stack>
-
-                            <Stack horizontal wrap tokens={{ childrenGap: 24 }}>
-                                <FieldDisplay label="Customer Contract Code" value={contract.customerContractCode} />
-                                <FieldDisplay label="OG" value={contract.ogTitle} />
-                                <FieldDisplay label="LOB" value={contract.lobTitle} />
-                                <FieldDisplay label="Customer" value={contract.customer} />
-                                <FieldDisplay label="Relevant Partner Tag" value={contract.partner} />
-                            </Stack>
-
-                            <Stack horizontal wrap tokens={{ childrenGap: 24 }}>
-                                <FieldDisplay label="Start" value={contract.startDate ? formatDate(contract.startDate) : undefined} />
-                                <FieldDisplay label="End" value={contract.endDate ? formatDate(contract.endDate) : undefined} />
-                                <Stack style={{ minWidth: 240, flexGrow: 1 }}>
-                                    <Label>Contract Info Link/URL</Label>
-                                    {contract.infoLink ? (
-                                        <Link href={contract.infoLink} target="_blank" rel="noopener noreferrer">
-                                            {contract.infoLink}
-                                        </Link>
-                                    ) : (
-                                        <Text>—</Text>
-                                    )}
-                                </Stack>
-                            </Stack>
-
-                            <Stack horizontal wrap tokens={{ childrenGap: 24 }}>
-                                <PersonDisplay label="KGS Contract Project Manager" person={contract.contractPm} />
-                            </Stack>
-                        </Stack>
-                    ))}
-                </Stack>
-            </Stack>
+                />
+            ))}
         </Stack>
     );
 };

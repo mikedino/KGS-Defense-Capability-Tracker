@@ -214,6 +214,11 @@ $appHeaderSubtleForeground: #e1dfdd;
     }
   }
 
+  .listTitleLink {
+    font-size: 14px;
+    font-weight: 600;
+  }
+
   /* Dashboard Stat Cards */
   .statCard {
     background-color: $ms-color-neutralLighter;
@@ -345,8 +350,87 @@ $appHeaderSubtleForeground: #e1dfdd;
 
   .tileView {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
     gap: 16px;
+  }
+
+  .capabilityTile {
+    border: 1px solid $ms-color-neutralLight;
+    border-radius: 4px;
+    background: $ms-color-white;
+    cursor: pointer;
+    min-height: 300px;
+    padding: 16px;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+
+    &:hover,
+    &:focus {
+      border-color: $ms-color-themePrimary;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, .1);
+      outline: none;
+    }
+  }
+
+  .capabilityTileHeader {
+    align-items: flex-start;
+    display: flex;
+    gap: 12px;
+    justify-content: space-between;
+  }
+
+  .capabilityTileTitle {
+    color: $ms-color-neutralPrimary;
+    flex: 1 1 auto;
+    font-size: 16px;
+    font-weight: 600;
+    line-height: 22px;
+    min-width: 0;
+  }
+
+  .capabilityTileDescription {
+    color: $ms-color-neutralSecondary;
+    display: -webkit-box;
+    font-size: 13px;
+    line-height: 18px;
+    max-height: 72px;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 4;
+  }
+
+  .capabilityTileMeta {
+    display: grid;
+    gap: 7px;
+  }
+
+  .capabilityTileMetaRow {
+    align-items: start;
+    display: grid;
+    gap: 12px;
+    grid-template-columns: 118px minmax(0, 1fr);
+  }
+
+  .capabilityTileLabel {
+    color: $ms-color-neutralSecondary;
+    font-size: 12px;
+    line-height: 17px;
+  }
+
+  .capabilityTileValue {
+    color: $ms-color-neutralPrimary;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 17px;
+    min-width: 0;
+    overflow: hidden;
+    text-align: right;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .capabilityTileButton {
+    margin-top: 4px;
+    width: 100%;
   }
 
   .statusBadge {
@@ -425,6 +509,133 @@ $appHeaderSubtleForeground: #e1dfdd;
     background: $ms-color-white;
   }
 
+  .contractDetailList {
+    display: grid;
+    gap: 14px;
+    width: 100%;
+  }
+
+  .contractDetailCard {
+    border: 1px solid $ms-color-neutralLight;
+    border-radius: 4px;
+    background: $ms-color-white;
+    overflow: hidden;
+  }
+
+  .contractDetailHeader {
+    align-items: flex-start;
+    background: #faf9f8;
+    border-bottom: 1px solid $ms-color-neutralLight;
+    display: flex;
+    gap: 16px;
+    justify-content: space-between;
+    padding: 12px 16px;
+  }
+
+  .contractDetailEyebrow {
+    color: $ms-color-themePrimary;
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 16px;
+    margin-bottom: 3px;
+  }
+
+  .contractDetailTitle {
+    color: $ms-color-neutralPrimary;
+    display: block;
+    font-size: 16px;
+    font-weight: 600;
+    line-height: 22px;
+  }
+
+  .contractDetailId {
+    color: $ms-color-neutralSecondary;
+    flex: 0 0 auto;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 18px;
+    text-align: right;
+    white-space: nowrap;
+  }
+
+  .contractDetailBody {
+    display: grid;
+    gap: 14px;
+    padding: 14px 16px 16px;
+  }
+
+  .contractDetailGrid {
+    display: grid;
+    gap: 14px 24px;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .contractDetailGridThree {
+    display: grid;
+    gap: 14px 24px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .contractDetailGridWide {
+    display: grid;
+    gap: 14px 24px;
+    grid-template-columns: minmax(260px, 1fr) minmax(220px, 320px);
+  }
+
+  .contractDetailField {
+    min-width: 0;
+  }
+
+  .contractDetailLabel {
+    color: $ms-color-themePrimary;
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 18px;
+    margin-bottom: 4px;
+  }
+
+  .contractDetailValue {
+    color: $ms-color-neutralPrimary;
+    display: block;
+    font-size: 14px;
+    line-height: 20px;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .contractViewActions {
+    display: flex;
+    gap: 8px;
+    justify-content: space-between;
+    padding-top: 4px;
+  }
+
+  .contractViewActionsLeft,
+  .contractViewActionsRight {
+    align-items: center;
+    display: flex;
+    gap: 8px;
+  }
+
+  .contractCapabilitiesSection {
+    display: grid;
+    gap: 8px;
+  }
+
+  .contractCapabilitiesTitle {
+    color: $ms-color-themePrimary;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 18px;
+  }
+
+  .contractCapabilityLinks {
+    display: grid;
+    gap: 6px;
+  }
+
   .tagDetailCard {
     border: 1px solid $ms-color-neutralLighter;
     border-radius: 4px;
@@ -458,6 +669,282 @@ $appHeaderSubtleForeground: #e1dfdd;
     }
   }
 
+}
+
+.contractDetailList {
+  display: grid;
+  gap: 14px;
+  width: 100%;
+}
+
+.contractDetailCard {
+  border: 1px solid $ms-color-neutralLight;
+  border-radius: 4px;
+  background: $ms-color-white;
+  overflow: hidden;
+}
+
+.contractDetailHeader {
+  align-items: flex-start;
+  background: #faf9f8;
+  border-bottom: 1px solid $ms-color-neutralLight;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  padding: 12px 16px;
+}
+
+.contractDetailEyebrow {
+  color: $ms-color-themePrimary;
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 16px;
+  margin-bottom: 3px;
+}
+
+.contractDetailTitle {
+  color: $ms-color-neutralPrimary;
+  display: block;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 22px;
+}
+
+.contractDetailId {
+  color: $ms-color-neutralSecondary;
+  flex: 0 0 auto;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 18px;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.contractDetailBody {
+  display: grid;
+  gap: 14px;
+  padding: 14px 16px 16px;
+}
+
+.contractDetailGrid {
+  display: grid;
+  gap: 14px 24px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.contractDetailGridThree {
+  display: grid;
+  gap: 14px 24px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.contractDetailGridWide {
+  display: grid;
+  gap: 14px 24px;
+  grid-template-columns: minmax(260px, 1fr) minmax(220px, 320px);
+}
+
+.contractDetailField {
+  min-width: 0;
+}
+
+.contractDetailLabel {
+  color: $ms-color-themePrimary;
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 18px;
+  margin-bottom: 4px;
+}
+
+.contractDetailValue {
+  color: $ms-color-neutralPrimary;
+  display: block;
+  font-size: 14px;
+  line-height: 20px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.contractViewActions {
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+  padding-top: 4px;
+}
+
+.contractViewActionsLeft,
+.contractViewActionsRight {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+}
+
+.contractRelatedGrid {
+  align-items: start;
+  border-top: 1px solid $ms-color-neutralLight;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(0, 1fr);
+  margin-top: 2px;
+  padding-top: 14px;
+}
+
+.contractRelatedGridSplit {
+  gap: 18px 24px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.contractCapabilitiesSection,
+.contractDocumentsSection {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.contractRelatedGridSplit .contractCapabilitiesSection {
+  border-left: 1px solid $ms-color-neutralLight;
+  padding-left: 24px;
+}
+
+.contractCapabilitiesTitle {
+  color: $ms-color-themePrimary;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 18px;
+}
+
+.contractCapabilityLinks {
+  display: grid;
+  gap: 6px;
+}
+
+.contractCapabilityRow {
+  align-items: center;
+  display: flex;
+  gap: 4px;
+  min-width: 0;
+}
+
+.contractCapabilityRow .listTitleLink {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.contractCapabilityInfoButton {
+  flex: 0 0 auto;
+  height: 24px;
+  width: 24px;
+}
+
+.contractRelationshipSummary {
+  border-top: 1px solid $ms-color-neutralLight;
+  display: grid;
+  gap: 4px;
+  margin-top: 2px;
+  padding-top: 14px;
+}
+
+.contractRelationshipSummaryTitle {
+  color: $ms-color-themePrimary;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 18px;
+}
+
+.contractRelationshipSummaryText {
+  color: $ms-color-neutralPrimary;
+  font-size: 14px;
+  line-height: 20px;
+  white-space: pre-wrap;
+}
+
+.contractModalGrid {
+  align-items: start;
+  display: grid;
+  gap: 16px;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.contractModalFullWidth {
+  grid-column: 1 / -1;
+}
+
+.contractDocumentsPanel {
+  align-content: start;
+  background: $ms-color-white;
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.contractDocumentsHeader {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.contractDocumentsTitle {
+  color: $ms-color-themePrimary;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 18px;
+}
+
+.contractDocumentLinks {
+  align-content: start;
+  display: grid;
+  gap: 6px;
+}
+
+.contractDocumentRow {
+  align-items: center;
+  display: flex;
+  gap: 6px;
+  min-width: 0;
+}
+
+.contractDocumentActions {
+  display: inline-flex;
+  gap: 2px;
+
+  :global {
+    .ms-Button.ms-Button--icon {
+      height: 24px;
+      width: 24px;
+    }
+  }
+}
+
+.contractDocumentIcon {
+  color: $ms-color-neutralSecondary;
+  font-size: 14px;
+}
+
+.contractDocumentLink {
+  flex: 0 1 auto;
+  font-size: 14px;
+  line-height: 20px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.contractDocumentBadge {
+  background: #f3f2f1;
+  border-radius: 999px;
+  color: $ms-color-neutralSecondary;
+  flex: 0 0 auto;
+  font-size: 11px;
+  line-height: 16px;
+  padding: 1px 8px;
+  white-space: nowrap;
 }
 
 /* DETAILS LIST FORMATING */
@@ -647,6 +1134,15 @@ $appHeaderSubtleForeground: #e1dfdd;
   box-shadow: 0 1px 2px rgba(0, 0, 0, .05);
 }
 
+.contractDocumentsCard {
+  background: #ffffff;
+  border: 1px solid #e1dfdd;
+  border-left: 4px solid #2b579a;
+  border-radius: 4px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .05);
+  padding: 14px 16px 16px;
+}
+
 .formSectionHeader {
   display: flex;
   align-items: flex-start;
@@ -672,7 +1168,9 @@ $appHeaderSubtleForeground: #e1dfdd;
 
 .formGrid,
 .formGridTwo,
-.formGridThree {
+.formGridThree,
+.formGridWide,
+.contractFormHeaderGrid {
   display: grid;
   align-items: start;
   gap: 12px 20px;
@@ -681,12 +1179,26 @@ $appHeaderSubtleForeground: #e1dfdd;
 .formGrid + .formGrid,
 .formGrid + .formGridTwo,
 .formGrid + .formGridThree,
+.formGrid + .formGridWide,
+.formGrid + .contractFormHeaderGrid,
 .formGridTwo + .formGrid,
 .formGridTwo + .formGridTwo,
 .formGridTwo + .formGridThree,
+.formGridTwo + .formGridWide,
+.formGridTwo + .contractFormHeaderGrid,
 .formGridThree + .formGrid,
 .formGridThree + .formGridTwo,
-.formGridThree + .formGridThree {
+.formGridThree + .formGridThree,
+.formGridThree + .formGridWide,
+.formGridThree + .contractFormHeaderGrid,
+.formGridWide + .formGrid,
+.formGridWide + .formGridTwo,
+.formGridWide + .formGridThree,
+.formGridWide + .formGridWide,
+.contractFormHeaderGrid + .formGrid,
+.contractFormHeaderGrid + .formGridTwo,
+.contractFormHeaderGrid + .formGridThree,
+.contractFormHeaderGrid + .formGridWide {
   margin-top: 12px;
 }
 
@@ -700,6 +1212,14 @@ $appHeaderSubtleForeground: #e1dfdd;
 
 .formGridThree {
   grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.formGridWide {
+  grid-template-columns: minmax(260px, 1fr) minmax(240px, 320px);
+}
+
+.contractFormHeaderGrid {
+  grid-template-columns: minmax(360px, 1fr) minmax(145px, 180px);
 }
 
 .contractLookupGrid {
@@ -857,14 +1377,35 @@ $appHeaderSubtleForeground: #e1dfdd;
 
   .formGridTwo,
   .formGridThree,
+  .formGridWide,
+  .contractFormHeaderGrid,
   .contractLookupGrid,
+  .contractDetailGrid,
+  .contractDetailGridThree,
+  .contractDetailGridWide,
+  .contractRelatedGrid,
+  .contractRelatedGridSplit,
+  .contractModalGrid,
   .tagDetailGrid {
     grid-template-columns: 1fr;
+  }
+
+  .contractDetailHeader {
+    flex-direction: column;
+  }
+
+  .contractDetailId {
+    text-align: left;
   }
 
   .formSectionHeader {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .contractRelatedGridSplit .contractCapabilitiesSection {
+    border-left: none;
+    padding-left: 0;
   }
 }
 

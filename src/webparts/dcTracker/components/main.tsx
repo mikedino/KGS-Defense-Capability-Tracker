@@ -4,14 +4,14 @@ import {
   Stack, Text, DefaultButton, SearchBox, Dropdown, IDropdownOption, Pivot, PivotItem, Spinner, SpinnerSize,
   CommandBar, Dialog, DialogType, DialogFooter, ICommandBarItemProps, mergeStyleSets,
   MessageBar, MessageBarType, Icon,
-  IconButton
+  IconButton, PrimaryButton
 } from "@fluentui/react"
 import { DataSource } from './data/ds';
 import { formatError } from './common/utils';
 import Strings from './common/strings';
-import { ICapabilityItem, ICapFormSaveResult, IContractItem, IDCTrackerProps } from './common/props';
+import { ICapabilityItem, ICapFormSaveResult, IContractDocumentItem, IContractItem, IDCTrackerProps } from './common/props';
 import { customPivotStyles } from './ui/ComponentStyles';
-import { CapabilitiesList } from './views/CapabilitiesView';
+import { CapabilitiesList, ICapabilityContractSummary } from './views/CapabilitiesView';
 import { CapForm } from './forms/CapForm';
 import { CapabilityService } from './services/CapabilityService';
 import styles from './Dct.module.scss';
@@ -25,6 +25,7 @@ import { appTheme } from './ui/theme';
 import { ContractsList } from './views/ContractsView';
 import { ContractForm } from './forms/ContractForm';
 import { ContractService } from './services/ContractService';
+import { ContractDetailCard } from './views/contracts/ContractDetailCard';
 import { AppDashboard } from './views/Dashboard';
 import { Security } from './services/Security';
 import { exportCapabilitiesBookPdf } from './export/ExportPdfWrapper';
@@ -32,6 +33,13 @@ import { buildPdfBookItems } from './export/ExportPdfUtils';
 import { AppHeader } from './ui/AppHeader';
 import { HashRouter, useHistory, useLocation } from 'react-router-dom';
 import { CapRouteTab, getPathParts, routes } from './routing/routes';
+import { Helper } from 'gd-sprest-bs';
+import { ContractDocumentsPanel } from './views/contracts/ContractDocumentsPanel';
+import { ContractDocumentForm } from './forms/ContractDocumentForm';
+
+interface CustomFile extends File {
+  data: ArrayBuffer;
+}
 
 const DctContent: React.FC<IDCTrackerProps> = (props) => {
   const history = useHistory();
@@ -45,6 +53,14 @@ const DctContent: React.FC<IDCTrackerProps> = (props) => {
   const [contracts, setContracts] = useState<IContractItem[]>([]);
   const [selectedContract, setSelectedContract] = useState<IContractItem | undefined>(undefined);
   const [showContractForm, setShowContractForm] = useState<boolean>(false);
+  const [isContractEditMode, setIsContractEditMode] = useState<boolean>(false);
+  const [contractDocuments, setContractDocuments] = useState<IContractDocumentItem[]>([]);
+  const [contractDocumentType, setContractDocumentType] = useState<string | undefined>(undefined);
+  const [selectedContractDocument, setSelectedContractDocument] = useState<IContractDocumentItem | undefined>(undefined);
+  const [showContractDocUploadDialog, setShowContractDocUploadDialog] = useState<boolean>(false);
+  const [showContractDocEditDialog, setShowContractDocEditDialog] = useState<boolean>(false);
+  const [showContractDocDeleteDialog, setShowContractDocDeleteDialog] = useState<boolean>(false);
+  const [selectedRelationshipCapability, setSelectedRelationshipCapability] = useState<ICapabilityItem | undefined>(undefined);
 
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [capStatusFilter, setCapStatusFilter] = useState<string>("all");
@@ -115,8 +131,17 @@ const DctContent: React.FC<IDCTrackerProps> = (props) => {
     } else {
       setSelectedContract(undefined);
       setShowContractForm(false);
+      setIsContractEditMode(false);
     }
   }
+
+  // Load contract documents for the selected DCTContracts item.
+  const getContractDocuments = async (contractId: number): Promise<void> => {
+    const docs = await DataSource.getDocumentsByContract(contractId);
+    setContractDocuments(
+      [...docs].sort((a, b) => new Date(b.Modified).getTime() - new Date(a.Modified).getTime())
+    );
+  };
 
   const handleCapDetailsBack = (): void => {
     if (previousPathRef.current) {
@@ -129,6 +154,50 @@ const DctContent: React.FC<IDCTrackerProps> = (props) => {
       console.error(`Error refreshing datasource: ${formatError(error)}`)
     );
   };
+
+  const contractSummaryByCapabilityId = React.useMemo<Map<number, ICapabilityContractSummary>>(() => {
+    const summaryMap = new Map<number, ICapabilityContractSummary>();
+
+    contracts.forEach((contract) => {
+      ContractService.getCapabilityLookups(contract).forEach((capability) => {
+        const existing = summaryMap.get(capability.Id) ?? { titles: [], searchText: "" };
+        const title = contract.Title?.trim();
+        if (title) {
+          existing.titles.push(title);
+        }
+
+        existing.searchText = [
+          existing.searchText,
+          contract.Title,
+          contract.contractId,
+          contract.customerContractCode,
+          contract.customer,
+          contract.contractPm?.Title,
+          contract.partner,
+          contract.ogTitle,
+          contract.lobTitle
+        ]
+          .filter(Boolean)
+          .join(" ");
+
+        summaryMap.set(capability.Id, existing);
+      });
+    });
+
+    return summaryMap;
+  }, [contracts]);
+
+  const selectedContractCapabilities = React.useMemo<ICapabilityItem[]>(() => {
+    if (!selectedContract) return [];
+
+    const relatedCapabilityIds = new Set(
+      ContractService.getCapabilityLookups(selectedContract).map((capability) => capability.Id)
+    );
+
+    return capabilities
+      .filter((capability) => relatedCapabilityIds.has(capability.Id))
+      .sort((a, b) => (a.Title ?? "").localeCompare(b.Title ?? ""));
+  }, [capabilities, selectedContract]);
 
   const searchFilteredCapabilities = React.useMemo(() => {
     const search = searchTerm.toLowerCase().trim();
@@ -175,12 +244,13 @@ const DctContent: React.FC<IDCTrackerProps> = (props) => {
       // Build one searchable string per capability from direct fields only.
       const capabilitySearchText = searchableCapabilityFields
         .map((fieldName) => toSearchText(cap[fieldName]))
+        .concat(contractSummaryByCapabilityId.get(cap.Id)?.searchText ?? "")
         .join(" ")
         .toLowerCase();
 
       return capabilitySearchText.includes(search);
     });
-  }, [capabilities, searchTerm]);
+  }, [capabilities, contractSummaryByCapabilityId, searchTerm]);
 
   /**
    * Final fully filtered capabilities
@@ -204,6 +274,7 @@ const DctContent: React.FC<IDCTrackerProps> = (props) => {
   const closeContractForm = (): void => {
     setShowContractForm(false);
     setSelectedContract(undefined);
+    setIsContractEditMode(false);
 
     const parts = getPathParts(location.pathname);
     if ((parts[0] ?? "").toLowerCase() === "contracts" && parts[1]) {
@@ -231,10 +302,11 @@ const DctContent: React.FC<IDCTrackerProps> = (props) => {
     if (!section || section === "home" || section === "capabilities") {
       setShowAdminPanel(false);
       setSelectedCap(undefined);
-      setSelectedContract(undefined);
-      setShowContractForm(false);
-      setSelectedPivot("caps");
-      return;
+          setSelectedContract(undefined);
+          setShowContractForm(false);
+          setIsContractEditMode(false);
+          setSelectedPivot("caps");
+          return;
     }
 
     if (section === "dashboard") {
@@ -242,14 +314,21 @@ const DctContent: React.FC<IDCTrackerProps> = (props) => {
       setSelectedCap(undefined);
       setSelectedContract(undefined);
       setShowContractForm(false);
+      setIsContractEditMode(false);
       setSelectedPivot("dashboard");
       return;
     }
 
     if (section === "admin") {
+      if (!Security.IsAdmin) {
+        history.replace(routes.home);
+        return;
+      }
+
       setSelectedCap(undefined);
       setSelectedContract(undefined);
       setShowContractForm(false);
+      setIsContractEditMode(false);
       setShowAdminPanel(true);
       return;
     }
@@ -265,10 +344,12 @@ const DctContent: React.FC<IDCTrackerProps> = (props) => {
         if (contract) {
           setSelectedContract(contract);
           setShowContractForm(true);
+          setIsContractEditMode(false);
         }
       } else {
         setSelectedContract(undefined);
         setShowContractForm(false);
+        setIsContractEditMode(false);
       }
 
       return;
@@ -277,6 +358,7 @@ const DctContent: React.FC<IDCTrackerProps> = (props) => {
     if (section === "caps") {
       setShowAdminPanel(false);
       setShowContractForm(false);
+      setIsContractEditMode(false);
 
       const capId = Number(parts[1]);
       const routeAction = (parts[2] ?? "").toLowerCase();
@@ -382,6 +464,92 @@ const DctContent: React.FC<IDCTrackerProps> = (props) => {
 
   const handleNewCapabilityClick = (): void => {
     setShowCapForm(true);
+  };
+
+  const handleNewContractClick = (): void => {
+    setSelectedContract(undefined);
+    setContractDocuments([]);
+    setIsContractEditMode(true);
+    setShowContractForm(true);
+  };
+
+  const contractDocumentTypeOptions = React.useMemo<IDropdownOption[]>(
+    () => DataSource.getConfigOptions("cdocType"),
+    [showContractDocUploadDialog]
+  );
+
+  React.useEffect(() => {
+    if (selectedContract?.Id) {
+      getContractDocuments(selectedContract.Id).catch((error) =>
+        console.error(`Error loading contract documents: ${formatError(error)}`)
+      );
+    } else {
+      setContractDocuments([]);
+    }
+  }, [selectedContract?.Id]);
+
+  // Upload a selected file into the selected contract's dedicated document folder.
+  const handleAddContractDocument = async (): Promise<void> => {
+    if (!selectedContract?.Id || !contractDocumentType) return;
+
+    const file = await Helper.ListForm.showFileDialog();
+    if (!file || !file.src) {
+      throw new Error("No file selected or invalid file structure.");
+    }
+
+    setSpinnerMessage("Uploading contract document...");
+    setShowSpinner(true);
+
+    try {
+      const folderReady = await DocumentService.ensureContractDocumentFolder(selectedContract.Id);
+      if (!folderReady) {
+        await DocumentService.createContractFolder(selectedContract.Id);
+      }
+
+      const buffer: ArrayBuffer = await file.src.arrayBuffer();
+      const customFile: CustomFile = Object.assign(file.src, { data: buffer });
+      await DocumentService.uploadContractDocument(selectedContract.Id, file.name, customFile.data, contractDocumentType);
+      await getContractDocuments(selectedContract.Id);
+      setShowContractDocUploadDialog(false);
+      setContractDocumentType(undefined);
+    } finally {
+      setShowSpinner(false);
+    }
+  };
+
+  // Save contract document metadata edits and refresh the visible document list.
+  const handleEditContractDocument = async (documentItem: IContractDocumentItem): Promise<void> => {
+    if (!selectedContract?.Id) return;
+
+    setSpinnerMessage("Updating contract document...");
+    setShowSpinner(true);
+
+    try {
+      await DocumentService.editContractDocument(documentItem);
+      await getContractDocuments(selectedContract.Id);
+      setShowContractDocEditDialog(false);
+      setSelectedContractDocument(undefined);
+    } finally {
+      setShowSpinner(false);
+    }
+  };
+
+  // Delete a contract document and refresh the visible document list.
+  const handleDeleteContractDocument = async (documentItem?: IContractDocumentItem): Promise<void> => {
+    if (!selectedContract?.Id || !documentItem) return;
+
+    setSpinnerMessage("Deleting contract document...");
+    setShowSpinner(true);
+
+    try {
+      await DocumentService.deleteContractDocument(documentItem.Id);
+      await getContractDocuments(selectedContract.Id);
+      setShowContractDocDeleteDialog(false);
+      setShowContractDocEditDialog(false);
+      setSelectedContractDocument(undefined);
+    } finally {
+      setShowSpinner(false);
+    }
   };
 
   const commandBarItems: ICommandBarItemProps[] = [
@@ -501,6 +669,7 @@ const DctContent: React.FC<IDCTrackerProps> = (props) => {
             onBack={handleCapDetailsBack}
             activeTab={selectedCapTab}
             onTabChange={setSelectedCapTab}
+            onContractsChanged={setContracts}
             onNewCapability={handleNewCapabilityClick}
             context={props.context}
           />
@@ -534,6 +703,13 @@ const DctContent: React.FC<IDCTrackerProps> = (props) => {
                     ariaLabel="View all Capabilities"
                     itemKey="caps"
                     itemIcon="ProductCatalog"
+                  />                  
+                  <PivotItem
+                    headerText="Contracts"
+                    title="View Supporting Contract Information"
+                    ariaLabel="View Supporting Contract Information"
+                    itemKey="contracts"
+                    itemIcon="CompanyDirectory"
                   />
                   <PivotItem
                     headerText="Dashboard"
@@ -542,15 +718,6 @@ const DctContent: React.FC<IDCTrackerProps> = (props) => {
                     itemKey="dashboard"
                     itemIcon="Chart"
                   />
-                  {Security.IsAdmin && (
-                    <PivotItem
-                      headerText="Contracts"
-                      title="View Supporting Contract Information"
-                      ariaLabel="View Supporting Contract Information"
-                      itemKey="contracts"
-                      itemIcon="CompanyDirectory"
-                    />
-                  )}
                 </Pivot>
               </div>
               <div className={styles.mainNavCommands}>
@@ -617,18 +784,24 @@ const DctContent: React.FC<IDCTrackerProps> = (props) => {
                         onClick={() => setViewMode("list")}
                       />
 
-                      {/**** hide/disable for now ************
-                       *  <DefaultButton
+                      <DefaultButton
                         text="Tiles"
                         title="Switch to Tile view"
                         iconProps={{ iconName: "GridViewMedium" }}
                         primary={viewMode === "tile"}
                         onClick={() => setViewMode("tile")}
-                      /> */}
+                      />
                     </Stack>
                   </Stack>
 
-                  {loading ? null : <CapabilitiesList capabilities={filteredCapabilities} viewMode={viewMode} onSelectCap={handleSelectedCap} />}
+                  {loading ? null : (
+                    <CapabilitiesList
+                      capabilities={filteredCapabilities}
+                      contractSummaryByCapabilityId={contractSummaryByCapabilityId}
+                      viewMode={viewMode}
+                      onSelectCap={handleSelectedCap}
+                    />
+                  )}
 
                 </Stack>
               )}
@@ -637,8 +810,12 @@ const DctContent: React.FC<IDCTrackerProps> = (props) => {
                 <AppDashboard capabilities={capabilities} />
               )}
 
-              {selectedPivot === "contracts" && Security.IsAdmin && (
-                <ContractsList contracts={contracts} onSelectContract={handleSelectedContract} />
+              {selectedPivot === "contracts" && (
+                <ContractsList
+                  contracts={contracts}
+                  onSelectContract={handleSelectedContract}
+                  onNewContract={!Security.IsVisitor ? handleNewContractClick : undefined}
+                />
               )}
             </div>
           </Stack>
@@ -668,7 +845,7 @@ const DctContent: React.FC<IDCTrackerProps> = (props) => {
                 const capResponse = await CapabilityService.create(result.capability)
                 //create folder for related docs
                 await DocumentService.createCapabilityFolder(capResponse.Id);
-                await ContractService.saveForCapability(capResponse.Id, result.contracts, result.deletedContractIds);
+                await ContractService.saveForCapability(capResponse.Id, capResponse.Title, result.contracts, result.deletedContractIds);
 
                 setSpinnerMessage("Refreshing data...");
 
@@ -694,11 +871,20 @@ const DctContent: React.FC<IDCTrackerProps> = (props) => {
                 setSpinnerMessage("Deleting Capability Entry...");
                 setShowSpinner(true);
                 try {
-                  const relatedContracts = contracts.filter((contract) => contract.capability?.Id === selectedCap.Id);
-                  await Promise.all(relatedContracts.map((contract) => ContractService.delete(contract.Id)));
+                  await ContractService.removeCapabilityFromAllContracts(selectedCap.Id);
                   await CapabilityService.delete(selectedCap.Id)
                   setCapabilities((prevCaps) => prevCaps.filter(a => a.Id !== selectedCap.Id));
-                  setContracts((prevContracts) => prevContracts.filter(c => c.capability?.Id !== selectedCap.Id));
+                  setContracts((prevContracts) =>
+                    prevContracts
+                      .map((contract) => ({
+                        ...contract,
+                        capability: {
+                          results: ContractService.getCapabilityLookups(contract)
+                            .filter((capability) => capability.Id !== selectedCap.Id)
+                        }
+                      }))
+                      .filter((contract) => ContractService.getCapabilityLookups(contract).length > 0)
+                  );
                   setSelectedCap(undefined);
                   setShowCapForm(false);
                   history.push(routes.capabilities);
@@ -724,7 +910,9 @@ const DctContent: React.FC<IDCTrackerProps> = (props) => {
           onDismiss={closeContractForm}
           dialogContentProps={{
             type: DialogType.largeHeader,
-            title: "Edit Contract",
+            title: isContractEditMode
+              ? selectedContract ? "Edit Contract" : "New Contract"
+              : "Contract Details",
             showCloseButton: true
           }}
           modalProps={{
@@ -732,55 +920,248 @@ const DctContent: React.FC<IDCTrackerProps> = (props) => {
             styles: { main: dialogStyles.mainOverride }
           }}
         >
-          <ContractForm
-            item={selectedContract}
-            context={props.context}
-            onCancel={closeContractForm}
-            onSave={async (item) => {
-              if (selectedContract) {
-                //edit contract
-                setSpinnerMessage("Editing Contract...");
-                setShowSpinner(true);
+          {selectedContract && !isContractEditMode && (
+            <Stack tokens={{ childrenGap: 16 }}>
+              <div className={styles.contractModalGrid}>
+                <ContractDetailCard
+                  contract={selectedContract}
+                  eyebrow="Contract"
+                  relatedCapabilities={selectedContractCapabilities}
+                  documentsContent={(
+                    <ContractDocumentsPanel
+                      documents={contractDocuments}
+                      canEdit={!Security.IsVisitor}
+                      onEdit={(documentItem) => {
+                        setSelectedContractDocument(documentItem);
+                        setShowContractDocEditDialog(true);
+                      }}
+                      onDelete={(documentItem) => {
+                        setSelectedContractDocument(documentItem);
+                        setShowContractDocDeleteDialog(true);
+                      }}
+                      showAddButton={false}
+                    />
+                  )}
+                  onSelectCapability={(capability) => {
+                    setShowContractForm(false);
+                    setSelectedContract(undefined);
+                    setIsContractEditMode(false);
+                    history.push(routes.cap(capability.Id));
+                  }}
+                  onViewCapabilityRelationship={(capability) => setSelectedRelationshipCapability(capability)}
+                />
+              </div>
 
-                try {
-                  const editContract = await ContractService.edit(item);
-                  // Refresh data
-                  setSpinnerMessage("Refreshing data...");
-                  setContracts((prevContracts) => prevContracts.map((c) => c.Id === selectedContract.Id ? editContract : c));
-                  closeContractForm();
-                  setShowSpinner(false);
-                } catch (err) {
-                  console.error(`Error editing Contract: ${formatError(err)}`);
-                  setShowSpinner(false);
+              <div className={styles.contractViewActions}>
+                <div className={styles.contractViewActionsLeft}>
+                  {!Security.IsVisitor && (
+                    <PrimaryButton
+                      text="Add Document"
+                      iconProps={{ iconName: "Add" }}
+                      onClick={() => {
+                        setContractDocumentType(undefined);
+                        setShowContractDocUploadDialog(true);
+                      }}
+                    />
+                  )}
+                </div>
+
+                <div className={styles.contractViewActionsRight}>
+                {!Security.IsVisitor && (
+                    <PrimaryButton
+                      text="Edit"
+                      iconProps={{ iconName: "Edit" }}
+                      onClick={() => setIsContractEditMode(true)}
+                    />
+                )}
+                <DefaultButton text="Close" onClick={closeContractForm} />
+                </div>
+              </div>
+            </Stack>
+          )}
+
+          {isContractEditMode && (
+            <Stack tokens={{ childrenGap: 16 }}>
+              <ContractForm
+                item={selectedContract}
+                context={props.context}
+                onCancel={() => selectedContract ? setIsContractEditMode(false) : closeContractForm()}
+                onSave={async (item) => {
+                  const isNewContract = !selectedContract;
+                  setSpinnerMessage(isNewContract ? "Creating Contract..." : "Editing Contract...");
+                  setShowSpinner(true);
+
+                  try {
+                    const savedContract = isNewContract
+                      ? await ContractService.create(item)
+                      : await ContractService.edit(item);
+                    setSpinnerMessage("Refreshing data...");
+                    const refreshedContracts = await DataSource.refreshContracts();
+                    const refreshedSavedContract = refreshedContracts.find((contract) => contract.Id === savedContract.Id) ?? savedContract;
+                    setContracts([...refreshedContracts]);
+                    setSelectedContract(refreshedSavedContract);
+                    setIsContractEditMode(false);
+                    history.push(routes.contract(savedContract.Id));
+                    setShowSpinner(false);
+                  } catch (err) {
+                    console.error(`Error ${isNewContract ? "creating" : "editing"} Contract: ${formatError(err)}`);
+                    setShowSpinner(false);
+                    setDialogProps(`Error ${isNewContract ? "creating" : "editing"} Contract`, formatError(err));
+                  }
+                }}
+              >
+                {selectedContract && (
+                  <section className={styles.contractDocumentsCard}>
+                    <ContractDocumentsPanel
+                      documents={contractDocuments}
+                      canEdit={!Security.IsVisitor}
+                      onAdd={() => {
+                        setContractDocumentType(undefined);
+                        setShowContractDocUploadDialog(true);
+                      }}
+                      onEdit={(documentItem) => {
+                        setSelectedContractDocument(documentItem);
+                        setShowContractDocEditDialog(true);
+                      }}
+                      onDelete={(documentItem) => {
+                        setSelectedContractDocument(documentItem);
+                        setShowContractDocDeleteDialog(true);
+                      }}
+                    />
+                  </section>
+                )}
+              </ContractForm>
+            </Stack>
+          )}
+        </Dialog>
+
+        {/* Contract-capability relationship summary dialog */}
+        <Dialog
+          hidden={!selectedRelationshipCapability}
+          onDismiss={() => setSelectedRelationshipCapability(undefined)}
+          dialogContentProps={{
+            type: DialogType.largeHeader,
+            title: selectedRelationshipCapability?.Title ?? "Relationship Summary",
+            closeButtonAriaLabel: 'Close',
+            subText: selectedContract?.Title
+          }}
+          modalProps={{
+            isBlocking: false,
+            styles: { main: { width: "560px !important", maxWidth: "90vw !important" } }
+          }}
+        >
+          <Stack tokens={{ childrenGap: 12 }}>
+            <div className={styles.contractRelationshipSummary}>
+              <span className={styles.contractRelationshipSummaryTitle}>Capability Summary</span>
+              <span className={styles.contractRelationshipSummaryText}>
+                {selectedContract && selectedRelationshipCapability
+                  ? DataSource.getContractCapabilitySummary(selectedContract.Id, selectedRelationshipCapability.Id)?.summary || "No contract-specific summary has been added."
+                  : ""}
+              </span>
+            </div>
+          </Stack>
+          <DialogFooter>
+            {selectedRelationshipCapability && (
+              <PrimaryButton
+                text="View Capability"
+                onClick={() => {
+                  const capabilityId = selectedRelationshipCapability.Id;
+                  setSelectedRelationshipCapability(undefined);
+                  setShowContractForm(false);
                   setSelectedContract(undefined);
-                  setDialogProps("Error editing Contract", formatError(err));
-                }
+                  setIsContractEditMode(false);
+                  history.push(routes.cap(capabilityId));
+                }}
+              />
+            )}
+            <DefaultButton text="Close" onClick={() => setSelectedRelationshipCapability(undefined)} />
+          </DialogFooter>
+        </Dialog>
 
-              } else {
-                setDialogProps("No Contract selected", "Contracts must be added from a Capability first.");
-              }
-            }}
-            onDelete={async () => {
-              if (selectedContract) {
-                setSpinnerMessage("Deleting Contract Entry...");
-                setShowSpinner(true);
-                try {
-                  await ContractService.delete(selectedContract.Id)
-                  setContracts((prevContracts) => prevContracts.filter(c => c.Id !== selectedContract.Id));
-                  closeContractForm();
-                } catch (error) {
-                  const fError = formatError(error);
-                  console.error(`Error deleting Contract: ${fError}`);
-                  setDialogProps("Error deleting Contract", fError);
-                } finally {
-                  setShowSpinner(false);
-                }
-              } else {
-                setDialogProps("No Contract selected", "No Contract was selected. Please try again.")
-                return;
-              }
-            }}
+        {/* Contract document upload dialog */}
+        <Dialog
+          hidden={!showContractDocUploadDialog}
+          onDismiss={() => setShowContractDocUploadDialog(false)}
+          dialogContentProps={{
+            type: DialogType.normal,
+            title: "Upload Contract Document",
+            closeButtonAriaLabel: 'Close',
+            subText: "Select a contract document type before uploading."
+          }}
+        >
+          <Dropdown
+            label="Contract Document Type"
+            required
+            options={contractDocumentTypeOptions}
+            selectedKey={contractDocumentType}
+            onChange={(_, option?: IDropdownOption) => setContractDocumentType((option?.key as string) ?? undefined)}
+            style={{ marginBottom: 20 }}
           />
+          <DialogFooter>
+            <PrimaryButton
+              text="Upload Document"
+              iconProps={{ iconName: "Add" }}
+              disabled={!contractDocumentType}
+              title="Upload a new Contract Document"
+              onClick={async () => {
+                try {
+                  await handleAddContractDocument();
+                } catch (error) {
+                  setShowContractDocUploadDialog(false);
+                  const errorMessage = formatError(error);
+                  setDialogProps("Error uploading contract document", errorMessage);
+                  console.error("Error uploading contract document", errorMessage);
+                }
+              }}
+            />
+            <DefaultButton onClick={() => setShowContractDocUploadDialog(false)} text="Cancel" title="Close Dialog Box" />
+          </DialogFooter>
+        </Dialog>
+
+        {/* Contract document metadata dialog */}
+        <Dialog
+          hidden={!showContractDocEditDialog}
+          onDismiss={() => setShowContractDocEditDialog(false)}
+          dialogContentProps={{
+            type: DialogType.normal,
+            title: "Edit Contract Document",
+            closeButtonAriaLabel: 'Close'
+          }}
+        >
+          {selectedContractDocument && (
+            <ContractDocumentForm
+              item={selectedContractDocument}
+              onSave={handleEditContractDocument}
+              onCancel={() => setShowContractDocEditDialog(false)}
+              onDelete={(documentItem) => {
+                setSelectedContractDocument(documentItem);
+                setShowContractDocDeleteDialog(true);
+              }}
+            />
+          )}
+        </Dialog>
+
+        {/* Contract document delete confirmation */}
+        <Dialog
+          hidden={!showContractDocDeleteDialog}
+          onDismiss={() => setShowContractDocDeleteDialog(false)}
+          dialogContentProps={{
+            type: DialogType.normal,
+            title: "Delete Contract Document",
+            closeButtonAriaLabel: 'Cancel',
+            subText: "Are you sure you want to delete this contract document?"
+          }}
+        >
+          <DialogFooter>
+            <PrimaryButton
+              text="Delete"
+              className={styles.deleteButton}
+              iconProps={{ iconName: "Delete" }}
+              onClick={() => handleDeleteContractDocument(selectedContractDocument)}
+              title="Delete this Contract Document"
+            />
+            <DefaultButton onClick={() => setShowContractDocDeleteDialog(false)} text="Cancel" title="Close Dialog Box" />
+          </DialogFooter>
         </Dialog>
 
         {/* Error dialog */}

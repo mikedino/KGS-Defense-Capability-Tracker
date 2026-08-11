@@ -30,6 +30,8 @@ export type ConfigType =
     | "codingLanguage"
     | "compliance"
     | "connectivity"
+    | "cdocType"
+    | "contractType"
     | "customer"
     | "partner"
     | "hostingEnvironment"
@@ -77,15 +79,17 @@ export interface ICapabilityItem {
 
 export interface IContractItem {
     readonly Id: number;
-    capability?: ILookupItem;
+    capability?: { results: ILookupItem[] };
     Title: string; //Contract Title
     contractId?: string;
     customerContractCode?: string;
+    contractType?: string;
+    contractValue: number;
     customer?: string;
     startDate?: string; //date
     endDate?: string; //date
     contractPm?: IPeoplePickerExtended; //KGS Contract Project Manager
-    partner?: string; //config 
+    partner?: string; //config
     infoLink?: string;
     ogTitle?: string;
     lobTitle?: string;
@@ -93,12 +97,41 @@ export interface IContractItem {
 
 export interface ICapabilityContractDraft extends IContractItem {
     tempId?: string;
+    capabilitySummary?: string;
+    capabilitySummaryPoc?: IPeoplePickerExtended;
 }
 
 export interface ICapFormSaveResult {
     capability: ICapabilityItem;
     contracts: ICapabilityContractDraft[];
     deletedContractIds: number[];
+}
+
+export interface ICMSContractItem {
+    readonly Id: number;
+    Title: string; //Contract Title
+    ContractNumber?: string; //or Customer Contract Code
+    ProjectID: string; //use as Contract ID
+    OperatingGroup?: string; //choice field
+    ProjectManager?: IPeoplePicker;
+}
+
+// Contract source rows can come from more than one customer system before becoming DCTContracts items.
+export type ContractSourceType = "jamis" | "cms";
+
+// Normalized source contract shape used by the Contract form so it can search Jamis and CMS together.
+export interface IContractSourceItem {
+    readonly source: ContractSourceType;
+    readonly sourceId: number;
+    readonly sourceLabel: string;
+    Title: string;
+    contractId?: string;
+    customerContractCode?: string;
+    projectManager?: IPeoplePicker;
+    projectManagerEmail?: string;
+    projectManagerName?: string;
+    ogTitle?: string;
+    lobTitle?: string;
 }
 
 export interface IContractEndPointItem {
@@ -126,6 +159,29 @@ export interface IDocumentItem {
     readonly Modified: string;
     readonly File_x0020_Type: string;
     readonly Editor: IPeoplePicker;
+}
+
+export interface IContractDocumentItem {
+    readonly Id: number;
+    Title?: string;
+    contract: ILookupItem;
+    cdocType: string; //config
+    readonly UniqueId: string;  //GUID
+    readonly FileLeafRef: string; //filename
+    readonly EncodedAbsUrl: string; //direct file path
+    readonly ServerRedirectedEmbedUrl: string;
+    readonly Modified: string;
+    readonly File_x0020_Type: string;
+    readonly Editor: IPeoplePicker;
+}
+
+export interface IContractCapabilitySummaryItem {
+    readonly Id: number;
+    Title: string;
+    contract: ILookupItem;
+    capability: ILookupItem;
+    summary?: string;
+    poc?: IPeoplePickerExtended;
 }
 
 
@@ -166,15 +222,15 @@ export interface IProposalItem {
 }
 
 export interface IOgItem {
-  readonly Id: number;
-  Title: string;
-  president: IPeoplePicker;
-  lob: ILookupItem;
-  //CM: IPeoplePicker;
-  //SCM?: IPeoplePicker;
-  // Hierarchy
-  ogType: "OG" | "SrOG";
-  parentOg?: ILookupItem;   // set on child OGs; lookup resolves to the SrOG row (and its president)
-  isActive: boolean;
-  isSelectable: boolean;
+    readonly Id: number;
+    Title: string;
+    president: IPeoplePicker;
+    lob: ILookupItem;
+    //CM: IPeoplePicker;
+    //SCM?: IPeoplePicker;
+    // Hierarchy
+    ogType: "OG" | "SrOG";
+    parentOg?: ILookupItem;   // set on child OGs; lookup resolves to the SrOG row (and its president)
+    isActive: boolean;
+    isSelectable: boolean;
 }

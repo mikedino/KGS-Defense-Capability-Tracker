@@ -69,7 +69,8 @@ export const Configuration = Helper.SPConfig({
                     description: "Capability this contract relationship belongs to",
                     type: Helper.SPCfgFieldType.Lookup,
                     listName: Strings.Sites.main.lists.Capabilities,
-                    showField: "Title"
+                    multi: true,
+                    showField: "ID"
                 } as Helper.IFieldInfoLookup,
                 {
                     name: "contractId",
@@ -90,6 +91,12 @@ export const Configuration = Helper.SPConfig({
                     description: "Choices from config list"
                 },
                 {
+                    name: "contractType",
+                    title: "Contract Type",
+                    type: Helper.SPCfgFieldType.Text,
+                    description: "Choices from config list"
+                },
+                {
                     name: "ogTitle",
                     title: "OG",
                     type: Helper.SPCfgFieldType.Text,
@@ -103,13 +110,13 @@ export const Configuration = Helper.SPConfig({
                 },
                 {
                     name: "startDate",
-                    title: "Capability Start Date",
+                    title: "Start Date",
                     type: Helper.SPCfgFieldType.Date,
                     format: SPTypes.DateFormat.DateOnly
                 } as Helper.IFieldInfoDate,
                 {
                     name: "endDate",
-                    title: "Capability End Date",
+                    title: "End Date",
                     type: Helper.SPCfgFieldType.Date,
                     format: SPTypes.DateFormat.DateOnly
                 } as Helper.IFieldInfoDate,
@@ -125,6 +132,14 @@ export const Configuration = Helper.SPConfig({
                     description: "Choices from config list"
                 },
                 {
+                    name: "contractValue",
+                    title: "Contract Value",
+                    type: Helper.SPCfgFieldType.Currency,
+                    decimals: 2,
+                    defaultValue: "0",
+                    description: "Derived from the selected OG lookup"
+                } as Helper.IFieldInfoCurrency,
+                {
                     name: "infoLink",
                     title: "Contract Info Link/URL",
                     type: Helper.SPCfgFieldType.Text
@@ -139,6 +154,7 @@ export const Configuration = Helper.SPConfig({
                         'LinkTitle',
                         'capability',
                         'contractId',
+                        'contractType',
                         'customerContractCode',
                         'ogTitle',
                         'lobTitle',
@@ -148,6 +164,58 @@ export const Configuration = Helper.SPConfig({
                         'contractPm',
                         'partner',
                         'infoLink'
+                    ]
+                }
+            ]
+        },
+        {
+            ListInformation: {
+                Title: Strings.Sites.main.lists.ContractCapabilitySummary,
+                Description: "*DO NOT DELETE* List containing contract-specific capability summaries.",
+                BaseTemplate: SPTypes.ListTemplateType.GenericList,
+                OnQuickLaunch: false,
+                Hidden: true
+            },
+            TitleFieldDisplayName: "Contract Capability",
+            CustomFields: [
+                {
+                    name: "contract",
+                    title: "Contract",
+                    type: Helper.SPCfgFieldType.Lookup,
+                    listName: Strings.Sites.main.lists.Contracts,
+                    showField: "ID"
+                } as Helper.IFieldInfoLookup,
+                {
+                    name: "capability",
+                    title: "Capability",
+                    type: Helper.SPCfgFieldType.Lookup,
+                    listName: Strings.Sites.main.lists.Capabilities,
+                    showField: "ID"
+                } as Helper.IFieldInfoLookup,
+                {
+                    name: "summary",
+                    title: "Capability Summary",
+                    type: Helper.SPCfgFieldType.Note,
+                    noteType: SPTypes.FieldNoteType.TextOnly,
+                    numberOfLines: 6
+                } as Helper.IFieldInfoNote,
+                {
+                    name: "poc",
+                    title: "POC",
+                    type: Helper.SPCfgFieldType.User
+                } as Helper.IFieldInfoUser
+            ],
+            ViewInformation: [
+                {
+                    ViewName: "All Items",
+                    Default: true,
+                    ViewQuery: '<OrderBy><FieldRef Name="contract" /><FieldRef Name="capability" /></OrderBy>',
+                    ViewFields: [
+                        'LinkTitle',
+                        'contract',
+                        'capability',
+                        'summary',
+                        'poc'
                     ]
                 }
             ]
@@ -352,6 +420,40 @@ export const Configuration = Helper.SPConfig({
                     ViewQuery: '<OrderBy><FieldRef Name="capability" /><FieldRef Name="FileLeafRef" /></OrderBy>',
                     ViewFields: [
                         'capability', 'DocIcon', 'LinkFilename', 'docType', 'Modified', 'Editor', 'FileSizeDisplay'
+                    ]
+                }
+            ]
+        },
+        {
+            ListInformation: {
+                Title: Strings.Sites.main.lists.ContractDocuments,
+                Description: "Library containing Defense Capabilities Tracker contract documentation.",
+                BaseTemplate: SPTypes.ListTemplateType.DocumentLibrary,
+                OnQuickLaunch: false,
+                Hidden: true
+            },
+            CustomFields: [
+                {
+                    name: "contract",
+                    title: "Contract",
+                    type: Helper.SPCfgFieldType.Lookup,
+                    listName: Strings.Sites.main.lists.Contracts,
+                    showField: "ID"
+                } as Helper.IFieldInfoLookup,
+                {
+                    name: "cdocType",
+                    title: "Contract Document Type",
+                    type: Helper.SPCfgFieldType.Text,
+                    description: "Choices from config list"
+                }
+            ],
+            ViewInformation: [
+                {
+                    ViewName: "All Items",
+                    Default: true,
+                    ViewQuery: '<OrderBy><FieldRef Name="contract" /><FieldRef Name="FileLeafRef" /></OrderBy>',
+                    ViewFields: [
+                        'contract', 'DocIcon', 'LinkFilename', 'cdocType', 'Modified', 'Editor', 'FileSizeDisplay'
                     ]
                 }
             ]

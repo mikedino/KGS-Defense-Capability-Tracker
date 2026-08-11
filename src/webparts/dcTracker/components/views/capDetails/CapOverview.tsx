@@ -3,6 +3,8 @@ import { Label, Stack, Text } from "@fluentui/react";
 import { ICapabilityItem } from "../../common/props";
 import { DataSource } from "../../data/ds";
 import styles from "../../Dct.module.scss";
+import { PeoplePersona } from "../../ui/Persona";
+import { ContractService } from "../../services/ContractService";
 
 export interface ICapabilityOverviewProps {
     capState: ICapabilityItem;
@@ -26,9 +28,11 @@ const MultilineDisplay: React.FC<{ label: string; value?: string; emptyText?: st
 
 export const CapabilityOverview: React.FC<ICapabilityOverviewProps> = ({ capState, rightContent }) => {
     const relatedContracts = DataSource.Contracts
-        .filter((contract) => contract.capability?.Id === capState.Id)
+        .filter((contract) => ContractService.isLinkedToCapability(contract, capState.Id))
         .map((contract) => contract.Title)
         .filter(Boolean);
+
+    const stakeholders = capState.stakeholders?.results ?? [];
 
     return (
         <Stack tokens={{ childrenGap: 16 }}>
@@ -51,14 +55,36 @@ export const CapabilityOverview: React.FC<ICapabilityOverviewProps> = ({ capStat
                     </Stack>
 
                     <Stack horizontal wrap tokens={{ childrenGap: 24 }}>
-                        <Stack style={{ width: 220 }}>
+                        <Stack style={{ width: 200 }}>
                             <Label>Capability Status</Label>
                             <Text>{capState.capStatus || "Not set"}</Text>
                         </Stack>
 
-                        <Stack style={{ width: 260 }}>
+                        <Stack style={{ minWidth: 240 }}>
                             <Label>Contracts</Label>
                             <Text>{relatedContracts.length ? relatedContracts.join(", ") : "Not assigned"}</Text>
+                        </Stack>
+                    </Stack>
+
+                    {/* PEOPLE ROW */}
+                    <Stack horizontal wrap tokens={{ childrenGap: 24 }}>
+                        <Stack tokens={{ childrenGap: 4 }} style={{ width: 200 }}>
+                            <Label>Primary POC</Label>
+                            {capState.primaryPoc?.Id ? (
+                                <PeoplePersona person={capState.primaryPoc} showDetails={true} fallbackText="Not assigned" />
+                            ) : (
+                                <Text styles={{ root: { color: "gray", fontStyle: "italic" } }}>Not assigned</Text>
+                            )}
+                        </Stack>
+                        <Stack tokens={{ childrenGap: 4 }} style={{ minWidth: 240 }}>
+                            <Label>Stakeholder(s)</Label>
+                            <Stack horizontal wrap tokens={{ childrenGap: 4, padding: "0 2px" }}>
+                                {stakeholders.length > 0 ? (
+                                    stakeholders.map((p) => <PeoplePersona key={p.Id} person={p} />)
+                                ) : (
+                                    <Text styles={{ root: { color: "gray", fontStyle: "italic" } }}>None identified</Text>
+                                )}
+                            </Stack>
                         </Stack>
                     </Stack>
 

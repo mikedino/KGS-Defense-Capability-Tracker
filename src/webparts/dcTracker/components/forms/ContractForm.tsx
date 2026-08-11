@@ -13,104 +13,142 @@ import {
     IComboBoxOption,
     IDropdownOption,
     IPersonaProps,
+    MessageBar,
+    MessageBarType,
     PrimaryButton,
     Stack,
     TextField
 } from "@fluentui/react";
 import { PeoplePicker, PrincipalType } from "@pnp/spfx-controls-react/lib/PeoplePicker";
 import { WebPartContext } from "@microsoft/sp-webpart-base";
-import { IContractEndPointItem, IContractItem } from "../common/props";
+import { IContractItem, IContractSourceItem } from "../common/props";
 import { DataSource } from "../data/ds";
 import styles from "../Dct.module.scss";
 import { Security } from "../services/Security";
-import { onFormatDate, resolveUserByEmail } from "../common/utils";
+import { formatCurrencyInputValue, onFormatDate, parseCurrencyValue, resolveUserByEmail } from "../common/utils";
+import { ContractService } from "../services/ContractService";
 
 export interface IContractFormProps {
     item?: IContractItem;
     context: WebPartContext;
     onSave: (item: IContractItem) => void;
-    onDelete?: (itemId: number) => void;
+    onDelete?: () => void;
     onCancel: () => void;
+    children?: React.ReactNode;
 }
 
-type JamisLookupField = "contractId" | "Title" | "customerContractCode";
-const maxJamisResults = 20;
+type ContractLookupField = "contractId" | "Title" | "customerContractCode";
+const maxContractSourceResults = 20;
 
-export const ContractForm: React.FC<IContractFormProps> = ({ item, context, onSave, onDelete, onCancel }) => {
+export const ContractForm: React.FC<IContractFormProps> = ({ item, context, onSave, onDelete, onCancel, children }) => {
     const [formData, setFormData] = React.useState<IContractItem>({
         Id: item?.Id || 0,
-        capability: item?.capability,
+        capability: { results: item?.capability?.results ?? [] },
         Title: item?.Title || "",
         contractId: item?.contractId || "",
+        contractType: item?.contractType || "",
         customerContractCode: item?.customerContractCode || "",
         customer: item?.customer || "",
         startDate: item?.startDate || "",
         endDate: item?.endDate || "",
         contractPm: item?.contractPm?.Id ? item.contractPm : undefined,
         partner: item?.partner || "",
+        contractValue: item?.contractValue || 0,
         infoLink: item?.infoLink || "",
         ogTitle: item?.ogTitle || "",
         lobTitle: item?.lobTitle || ""
     });
     const [showDeleteConfirmation, setShowDeleteConfirmation] = React.useState(false);
-    const [jamisSearchText, setJamisSearchText] = React.useState<Record<JamisLookupField, string>>({
+    const [contractSourceSearchText, setContractSourceSearchText] = React.useState<Record<ContractLookupField, string>>({
         contractId: item?.contractId || "",
         Title: item?.Title || "",
         customerContractCode: item?.customerContractCode || ""
     });
+    const [contractValueText, setContractValueText] = React.useState<string>(
+        formatCurrencyInputValue(item?.contractValue ?? 0)
+    );
+    const [formMessage, setFormMessage] = React.useState<string | undefined>(undefined);
 
     type CustomerType = IContractItem["customer"];
     type PartnerType = IContractItem["partner"];
+    type ContractType = IContractItem["contractType"];
 
     const customerOptions = React.useMemo<IDropdownOption[]>(() => DataSource.getConfigOptions("customer"), []);
     const partnerOptions = React.useMemo<IDropdownOption[]>(() => DataSource.getConfigOptions("partner"), []);
-    const jamisContracts = React.useMemo<IContractEndPointItem[]>(() => DataSource.JamisContracts ?? [], []);
+    const contractTypeOptions = React.useMemo<IDropdownOption[]>(() => DataSource.getConfigOptions("contractType"), []);
+    const contractSources = React.useMemo<IContractSourceItem[]>(() => DataSource.ContractSources ?? [], []);
 
-    const getOrgTitlesForJamisContract = (contract?: IContractEndPointItem): Pick<IContractItem, "ogTitle" | "lobTitle"> => {
-        const ogTitle = (contract?.field_75 ?? "").trim();
-        const ogItem = DataSource.OGs.find((og) => og.Title.toLowerCase() === ogTitle.toLowerCase());
-
-        return {
-            ogTitle,
-            lobTitle: ogItem?.lob?.Title ?? ""
-        };
-    };
-
-    const getJamisValue = (contract: IContractEndPointItem, field: JamisLookupField): string => {
+    // Read a normalized source field so all three lookup boxes can share filtering and rendering.
+    const getContractSourceValue = (contract: IContractSourceItem, field: ContractLookupField): string => {
         switch (field) {
             case "contractId":
-                return contract.field_19 ?? "";
+                return contract.contractId ?? "";
             case "Title":
-                return contract.field_20 ?? "";
+                return contract.Title ?? "";
             case "customerContractCode":
-                return contract.field_35 ?? "";
+                return contract.customerContractCode ?? "";
         }
     };
 
-    const getJamisOptions = (field: JamisLookupField): IComboBoxOption[] => {
-        const searchText = (jamisSearchText[field] ?? "").trim().toLowerCase();
+    // Create combo box options from the combined Jamis/CMS source collection.
+    const getContractSourceOptions = (field: ContractLookupField): IComboBoxOption[] => {
+        const searchText = (contractSourceSearchText[field] ?? "").trim().toLowerCase();
         const matches = searchText
-            ? jamisContracts.filter((contract) => getJamisValue(contract, field).toLowerCase().includes(searchText))
-            : jamisContracts;
+            ? contractSources.filter((contract) => getContractSourceValue(contract, field).toLowerCase().includes(searchText))
+            : contractSources;
 
         return matches
             .map((contract): IComboBoxOption => ({
-                key: contract.Id,
-                text: getJamisValue(contract, field),
+                key: `${contract.source}-${contract.sourceId}`,
+                text: getContractSourceValue(contract, field),
                 data: contract
             }))
             .filter((option) => !!option.text)
             .sort((a, b) => a.text.localeCompare(b.text))
-            .slice(0, maxJamisResults);
+            .slice(0, maxContractSourceResults);
     };
 
-    const contractIdOptions = React.useMemo<IComboBoxOption[]>(() => getJamisOptions("contractId"), [jamisContracts, jamisSearchText.contractId]);
-    const contractTitleOptions = React.useMemo<IComboBoxOption[]>(() => getJamisOptions("Title"), [jamisContracts, jamisSearchText.Title]);
-    const customerContractCodeOptions = React.useMemo<IComboBoxOption[]>(() => getJamisOptions("customerContractCode"), [jamisContracts, jamisSearchText.customerContractCode]);
+    const contractIdOptions = React.useMemo<IComboBoxOption[]>(() => getContractSourceOptions("contractId"), [contractSources, contractSourceSearchText.contractId]);
+    const contractTitleOptions = React.useMemo<IComboBoxOption[]>(() => getContractSourceOptions("Title"), [contractSources, contractSourceSearchText.Title]);
+    const customerContractCodeOptions = React.useMemo<IComboBoxOption[]>(() => getContractSourceOptions("customerContractCode"), [contractSources, contractSourceSearchText.customerContractCode]);
 
     const handleChange = <K extends keyof IContractItem>(field: K, value: IContractItem[K]): void => {
+        setFormMessage(undefined);
         setFormData((prev) => ({ ...prev, [field]: value }));
     };
+
+    const handleContractValueChange = (value?: string): void => {
+        const nextText = value ?? "";
+        setContractValueText(nextText);
+        handleChange("contractValue", parseCurrencyValue(nextText));
+    };
+
+    const handleContractValueBlur = (): void => {
+        const contractValue = parseCurrencyValue(contractValueText);
+        handleChange("contractValue", contractValue);
+        setContractValueText(formatCurrencyInputValue(contractValue));
+    };
+
+    const applyContractData = (contract: IContractItem): void => {
+        setFormData((prev) => ({
+            ...prev,
+            ...contract,
+            capability: {
+                results: contract.capability?.results ?? prev.capability?.results ?? []
+            }
+        }));
+        setContractSourceSearchText({
+            contractId: contract.contractId ?? "",
+            Title: contract.Title ?? "",
+            customerContractCode: contract.customerContractCode ?? ""
+        });
+        setContractValueText(formatCurrencyInputValue(contract.contractValue ?? 0));
+    };
+
+    const findLocalContractMatch = (
+        contract: Pick<IContractItem, "Id" | "contractId" | "customerContractCode" | "Title">
+    ): IContractItem | undefined =>
+        ContractService.findMatchingContract(contract, DataSource.Contracts);
 
     const resolveProjectManager = async (email?: string, fallbackName?: string): Promise<void> => {
         const user = await resolveUserByEmail(email, fallbackName);
@@ -122,44 +160,79 @@ export const ContractForm: React.FC<IContractFormProps> = ({ item, context, onSa
         }));
     };
 
-    const syncJamisContract = (contract: IContractEndPointItem): void => {
-        const orgTitles = getOrgTitlesForJamisContract(contract);
+    // Apply the selected normalized source row to the DCT contract shape used by saves.
+    const syncContractSource = (contract: IContractSourceItem): void => {
+        const sourceContract: IContractItem = {
+            Id: 0,
+            contractId: contract.contractId ?? "",
+            Title: contract.Title ?? "",
+            customerContractCode: contract.customerContractCode ?? "",
+            contractValue: 0,
+            ogTitle: contract.ogTitle ?? "",
+            lobTitle: contract.lobTitle ?? "",
+            contractPm: contract.projectManager
+        };
+        const localContract = findLocalContractMatch(sourceContract);
+
+        if (localContract) {
+            applyContractData(localContract);
+            return;
+        }
 
         setFormData((prev) => ({
             ...prev,
-            contractId: contract.field_19 ?? "",
-            Title: contract.field_20 ?? "",
-            customerContractCode: contract.field_35 ?? "",
-            ...orgTitles
+            contractId: contract.contractId ?? "",
+            Title: contract.Title ?? "",
+            customerContractCode: contract.customerContractCode ?? "",
+            ogTitle: contract.ogTitle ?? "",
+            lobTitle: contract.lobTitle ?? "",
+            contractPm: contract.projectManager ?? prev.contractPm
         }));
-        setJamisSearchText({
-            contractId: contract.field_19 ?? "",
-            Title: contract.field_20 ?? "",
-            customerContractCode: contract.field_35 ?? ""
+        setContractSourceSearchText({
+            contractId: contract.contractId ?? "",
+            Title: contract.Title ?? "",
+            customerContractCode: contract.customerContractCode ?? ""
         });
 
-        resolveProjectManager(contract.field_21, contract.field_23).catch((error) =>
-            console.warn("Unable to set Jamis Contract Project Manager", error)
-        );
-    };
-
-    const handleJamisSelect = (option?: IComboBoxOption): void => {
-        const selectedContract = option?.data as IContractEndPointItem | undefined;
-        if (selectedContract) {
-            syncJamisContract(selectedContract);
+        if (!contract.projectManager) {
+            resolveProjectManager(contract.projectManagerEmail, contract.projectManagerName).catch((error) =>
+                console.warn("Unable to set Contract Project Manager", error)
+            );
         }
     };
 
-    const handleJamisInput = (field: JamisLookupField, value: string): void => {
-        setJamisSearchText((prev) => ({ ...prev, [field]: value }));
+    // Handle source dropdown selection for Jamis or CMS rows.
+    const handleContractSourceSelect = (option?: IComboBoxOption): void => {
+        const selectedContract = option?.data as IContractSourceItem | undefined;
+        if (selectedContract) {
+            syncContractSource(selectedContract);
+        }
+    };
+
+    // Handle freeform source lookup text while still auto-applying exact Jamis/CMS matches.
+    const handleContractSourceInput = (field: ContractLookupField, value: string): void => {
+        setFormMessage(undefined);
+        setContractSourceSearchText((prev) => ({ ...prev, [field]: value }));
 
         const normalizedValue = value.trim().toLowerCase();
         const matchingContract = normalizedValue
-            ? jamisContracts.find((contract) => getJamisValue(contract, field).trim().toLowerCase() === normalizedValue)
+            ? contractSources.find((contract) => getContractSourceValue(contract, field).trim().toLowerCase() === normalizedValue)
             : undefined;
 
         if (matchingContract) {
-            syncJamisContract(matchingContract);
+            syncContractSource(matchingContract);
+            return;
+        }
+
+        const localContract = findLocalContractMatch({
+            Id: 0,
+            contractId: field === "contractId" ? value : formData.contractId,
+            Title: field === "Title" ? value : formData.Title,
+            customerContractCode: field === "customerContractCode" ? value : formData.customerContractCode
+        });
+
+        if (localContract) {
+            applyContractData(localContract);
             return;
         }
 
@@ -171,27 +244,32 @@ export const ContractForm: React.FC<IContractFormProps> = ({ item, context, onSa
         }));
     };
 
-    const renderJamisOption = (activeField: JamisLookupField): ((option?: IComboBoxOption) => JSX.Element) => (option?: IComboBoxOption): JSX.Element => {
-        const contract = option?.data as IContractEndPointItem | undefined;
-        const weight = (field: JamisLookupField): 400 | 600 => field === activeField ? 600 : 400;
+    // Render source options with all identity fields plus the origin system to explain mixed Jamis/CMS results.
+    const renderContractSourceOption = (activeField: ContractLookupField): ((option?: IComboBoxOption) => JSX.Element) => (option?: IComboBoxOption): JSX.Element => {
+        const contract = option?.data as IContractSourceItem | undefined;
+        const weight = (field: ContractLookupField): 400 | 600 => field === activeField ? 600 : 400;
         const empty = "-";
 
         return (
             <div style={{ display: "block", padding: "8px 10px", lineHeight: 1.25, minHeight: 50 }}>
                 <div style={{ display: "block", fontSize: 12, fontWeight: weight("contractId") }}>
-                    ID: {contract?.field_19 || empty}
+                    ID: {contract?.contractId || empty}
                 </div>
                 <div style={{ display: "block", fontSize: 12, fontWeight: weight("Title"), marginTop: 2 }}>
-                    Title: {contract?.field_20 || empty}
+                    Title: {contract?.Title || empty}
                 </div>
                 <div style={{ display: "block", fontSize: 12, fontWeight: weight("customerContractCode"), marginTop: 2 }}>
-                    Code: {contract?.field_35 || empty}
+                    Code: {contract?.customerContractCode || empty}
+                </div>
+                <div style={{ display: "block", fontSize: 11, marginTop: 2 }}>
+                    Source: {contract?.sourceLabel || empty}
                 </div>
             </div>
         );
     };
 
-    const jamisComboProps = {
+    // Shared combo behavior for each contract source lookup field.
+    const contractSourceComboProps = {
         allowFreeform: true,
         allowFreeInput: true,
         autoComplete: "off" as const,
@@ -223,7 +301,28 @@ export const ContractForm: React.FC<IContractFormProps> = ({ item, context, onSa
         });
     };
 
-    const handleDelete = (): void => onDelete?.(formData.Id);
+    const findDuplicateContract = (): IContractItem | undefined => {
+        const originalItemId = item?.Id ?? 0;
+
+        return DataSource.Contracts.find((contract) => {
+            if (originalItemId > 0 && contract.Id === originalItemId) return false;
+            return ContractService.contractsMatch(formData, contract);
+        });
+    };
+
+    const handleSave = (): void => {
+        const duplicateContract = findDuplicateContract();
+
+        if (duplicateContract) {
+            setFormMessage(
+                `A contract already exists with the same Contract Title, Customer Contract Code, or Contract ID: ${duplicateContract.Title || duplicateContract.contractId || "existing contract"}. Please use the existing contract instead.`
+            );
+            return;
+        }
+
+        onSave(formData);
+    };
+
     const canEdit = Security.IsAdmin || Security.IsContributor;
 
     return (
@@ -232,42 +331,52 @@ export const ContractForm: React.FC<IContractFormProps> = ({ item, context, onSa
                 <div className={styles.formSectionHeader}>
                     <div>
                         <h3>Contract Info</h3>
-                        <p>Use Contract ID, Contract Title, or Customer Contract Code to find and select a Jamis contract.</p>
+                        <p>Use Contract ID, Contract Title, or Customer Contract Code to find and select a source contract.</p>
                     </div>
                 </div>
 
-                <div className={`${styles.formGridThree} ${styles.contractLookupGrid}`}>
-                    <ComboBox
-                        label="Contract ID"
-                        className={styles.formControl}
-                        selectedKey={undefined}
-                        text={formData.contractId ?? ""}
-                        options={contractIdOptions}
-                        disabled={!canEdit}
-                        {...jamisComboProps}
-                        onRenderOption={renderJamisOption("contractId")}
-                        onInputValueChange={(value) => handleJamisInput("contractId", value)}
-                        onChange={(
-                            _event: React.FormEvent<IComboBox>,
-                            option?: IComboBoxOption
-                        ) => handleJamisSelect(option)}
-                    />
+                {formMessage && (
+                    <MessageBar messageBarType={MessageBarType.warning} isMultiline>
+                        {formMessage}
+                    </MessageBar>
+                )}
 
+                <div className={styles.formGrid}>
                     <ComboBox
                         label="Contract Title"
                         className={styles.formControl}
                         selectedKey={undefined}
                         text={formData.Title}
                         options={contractTitleOptions}
+                        placeholder="Search..."
                         disabled={!canEdit}
-                        {...jamisComboProps}
-                        onRenderOption={renderJamisOption("Title")}
-                        onInputValueChange={(value) => handleJamisInput("Title", value)}
+                        {...contractSourceComboProps}
+                        onRenderOption={renderContractSourceOption("Title")}
+                        onInputValueChange={(value) => handleContractSourceInput("Title", value)}
                         onChange={(
                             _event: React.FormEvent<IComboBox>,
                             option?: IComboBoxOption
-                        ) => handleJamisSelect(option)}
+                        ) => handleContractSourceSelect(option)}
                         required
+                    />
+                </div>
+
+                <div className={styles.formGridThree}>
+                    <ComboBox
+                        label="Contract ID"
+                        className={styles.formControl}
+                        selectedKey={undefined}
+                        text={formData.contractId ?? ""}
+                        options={contractIdOptions}
+                        placeholder="Search..."
+                        disabled={!canEdit}
+                        {...contractSourceComboProps}
+                        onRenderOption={renderContractSourceOption("contractId")}
+                        onInputValueChange={(value) => handleContractSourceInput("contractId", value)}
+                        onChange={(
+                            _event: React.FormEvent<IComboBox>,
+                            option?: IComboBoxOption
+                        ) => handleContractSourceSelect(option)}
                     />
 
                     <ComboBox
@@ -276,14 +385,36 @@ export const ContractForm: React.FC<IContractFormProps> = ({ item, context, onSa
                         selectedKey={undefined}
                         text={formData.customerContractCode ?? ""}
                         options={customerContractCodeOptions}
+                        placeholder="Search..."
                         disabled={!canEdit}
-                        {...jamisComboProps}
-                        onRenderOption={renderJamisOption("customerContractCode")}
-                        onInputValueChange={(value) => handleJamisInput("customerContractCode", value)}
+                        {...contractSourceComboProps}
+                        onRenderOption={renderContractSourceOption("customerContractCode")}
+                        onInputValueChange={(value) => handleContractSourceInput("customerContractCode", value)}
                         onChange={(
                             _event: React.FormEvent<IComboBox>,
                             option?: IComboBoxOption
-                        ) => handleJamisSelect(option)}
+                        ) => handleContractSourceSelect(option)}
+                    />
+
+                    <Dropdown
+                        label="Contract Type"
+                        className={styles.formControl}
+                        selectedKey={formData.contractType || undefined}
+                        options={contractTypeOptions}
+                        disabled={!canEdit}
+                        onChange={(_, option) => {
+                            if (option) handleChange("contractType", option.key as ContractType);
+                        }}
+                    />
+
+                    <TextField
+                        label="Contract Value"
+                        className={styles.formControl}
+                        prefix="$"
+                        value={contractValueText}
+                        disabled={!canEdit}
+                        onChange={(_, val) => handleContractValueChange(val)}
+                        onBlur={handleContractValueBlur}
                     />
                 </div>
 
@@ -314,9 +445,20 @@ export const ContractForm: React.FC<IContractFormProps> = ({ item, context, onSa
                     />
                 </div>
 
-                <div className={styles.formGridTwo}>
+                <div className={styles.formGridThree}>
+                    <Dropdown
+                        label="Partner Tag"
+                        className={styles.formControl}
+                        selectedKey={formData.partner || undefined}
+                        options={partnerOptions}
+                        disabled={!canEdit}
+                        onChange={(_, option) => {
+                            if (option) handleChange("partner", option.key as PartnerType);
+                        }}
+                    />
+
                     <DatePicker
-                        label="Capability Start Date"
+                        label="Start Date"
                         className={styles.formControl}
                         firstDayOfWeek={DayOfWeek.Sunday}
                         disabled={!canEdit}
@@ -327,7 +469,7 @@ export const ContractForm: React.FC<IContractFormProps> = ({ item, context, onSa
                     />
 
                     <DatePicker
-                        label="Capability End Date"
+                        label="End Date"
                         className={styles.formControl}
                         firstDayOfWeek={DayOfWeek.Sunday}
                         disabled={!canEdit}
@@ -338,7 +480,15 @@ export const ContractForm: React.FC<IContractFormProps> = ({ item, context, onSa
                     />
                 </div>
 
-                <div className={styles.formGridTwo}>
+                <div className={styles.formGridWide}>
+                    <TextField
+                        label="Contract Info Link/URL"
+                        className={styles.formControl}
+                        value={formData.infoLink ?? ""}
+                        disabled={!canEdit}
+                        onChange={(_, val) => handleChange("infoLink", val ?? "")}
+                    />
+
                     <PeoplePicker
                         key={`contractPm-${formData.contractPm?.EMail ?? "none"}`}
                         context={{
@@ -358,38 +508,19 @@ export const ContractForm: React.FC<IContractFormProps> = ({ item, context, onSa
                         resolveDelay={1000}
                     />
                 </div>
-
-                <div className={styles.formGridTwo}>
-                    <Dropdown
-                        label="Relevant Partner Tag"
-                        className={styles.formControl}
-                        selectedKey={formData.partner || undefined}
-                        options={partnerOptions}
-                        disabled={!canEdit}
-                        onChange={(_, option) => {
-                            if (option) handleChange("partner", option.key as PartnerType);
-                        }}
-                    />
-
-                    <TextField
-                        label="Contract Info Link/URL"
-                        className={styles.formControl}
-                        value={formData.infoLink ?? ""}
-                        disabled={!canEdit}
-                        onChange={(_, val) => handleChange("infoLink", val ?? "")}
-                    />
-                </div>
             </section>
 
+            {children}
+
             <Stack horizontal horizontalAlign="space-between" tokens={{ childrenGap: 10 }} styles={{ root: { paddingTop: 20 } }}>
-                {item ? (
+                {onDelete ? (
                     <PrimaryButton
-                        text="Delete"
+                        text="Remove"
                         className={styles.deleteButton}
                         style={{ width: 150 }}
                         onClick={() => setShowDeleteConfirmation(true)}
                         disabled={!canEdit}
-                        title="Delete Record"
+                        title="Remove Contract Relationship"
                     />
                 ) : (
                     <span style={{ width: 150 }} />
@@ -399,7 +530,7 @@ export const ContractForm: React.FC<IContractFormProps> = ({ item, context, onSa
                     <PrimaryButton
                         text="Save"
                         style={{ width: 150 }}
-                        onClick={() => onSave(formData)}
+                        onClick={handleSave}
                         disabled={!canEdit}
                         title="Save Record"
                     />
@@ -412,13 +543,13 @@ export const ContractForm: React.FC<IContractFormProps> = ({ item, context, onSa
                 onDismiss={() => setShowDeleteConfirmation(false)}
                 dialogContentProps={{
                     type: DialogType.normal,
-                    title: "Delete Contract Entry",
-                    subText: "Are you sure you want to delete this Contract Entry?",
+                    title: "Remove Contract Relationship",
+                    subText: "Remove this contract from the capability?",
                     closeButtonAriaLabel: "Cancel"
                 }}
             >
                 <DialogFooter>
-                    <PrimaryButton text="Delete" className={styles.deleteButton} onClick={handleDelete} title="Delete Record" />
+                    <PrimaryButton text="Remove" className={styles.deleteButton} onClick={onDelete} title="Remove Contract Relationship" />
                     <DefaultButton text="Cancel" onClick={() => setShowDeleteConfirmation(false)} title="Close Dialog Box" />
                 </DialogFooter>
             </Dialog>

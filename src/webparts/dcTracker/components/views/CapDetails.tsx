@@ -40,6 +40,7 @@ interface CapDetailsProps {
     onBack: () => void;
     activeTab?: CapRouteTab;
     onTabChange?: (tab: CapRouteTab) => void;
+    onContractsChanged?: (contracts: IContractItem[]) => void;
     onNewCapability?: () => void;
 }
 
@@ -62,7 +63,7 @@ export type DocFolderStatus = "unknown" | "ready" | "missing" | "error";
 const isCapabilityTab = (v: unknown): v is CapRouteTab =>
     v === "overview" || v === "supporting" || v === "tagging" || v === "contract" || v === "documentation";
 
-export const CapDetails: React.FC<CapDetailsProps> = ({ capability, context, onBack, activeTab = "overview", onTabChange, onNewCapability }) => {
+export const CapDetails: React.FC<CapDetailsProps> = ({ capability, context, onBack, activeTab = "overview", onTabChange, onContractsChanged, onNewCapability }) => {
 
     const [capState, setCapState] = useState<ICapabilityItem>(capability);
     const [showCapabilityForm, setShowCapabilityForm] = useState<boolean>(false);
@@ -123,7 +124,7 @@ export const CapDetails: React.FC<CapDetailsProps> = ({ capability, context, onB
     }, [capability]);
 
     const contracts: IContractItem[] = DataSource.Contracts
-        .filter((contract) => contract.capability?.Id === capState.Id)
+        .filter((contract) => ContractService.isLinkedToCapability(contract, capState.Id))
         .sort((a, b) => (a.Title ?? "").localeCompare(b.Title ?? ""));
 
     const primaryContract: IContractItem | undefined = contracts[0];
@@ -137,6 +138,8 @@ export const CapDetails: React.FC<CapDetailsProps> = ({ capability, context, onB
     const statusProps = getAtoStatusFill(capState.capStatus);
     // const getUserPhotoUrl = (email: string): string => `/_layouts/15/userphoto.aspx?size=M&accountname=${encodeURIComponent(email)}`;
     const screenshots = documents.filter(doc => doc.docType === "Screenshot");
+    const canEdit = !Security.IsVisitor;
+    const canViewContract = true;
 
     /*************************************************************************
     **** adding new documents all done here in this component due to the amount of information needed before/during/after upload
@@ -516,6 +519,7 @@ export const CapDetails: React.FC<CapDetailsProps> = ({ capability, context, onB
                         iconProps={{ iconName: "Edit" }}
                         title="Edit"
                         ariaLabel="Edit"
+                        disabled={!canEdit}
                         onClick={() => {
                             setSelectedDocument(item);
                             setShowDocEditDialog(true);
@@ -525,6 +529,7 @@ export const CapDetails: React.FC<CapDetailsProps> = ({ capability, context, onB
                         iconProps={{ iconName: "Delete" }}
                         title="Delete"
                         ariaLabel="Delete"
+                        disabled={!canEdit}
                         style={{ color: Strings.PillStyles.RedColor }}
                         onClick={() => {
                             setSelectedDocument(item);
@@ -535,19 +540,6 @@ export const CapDetails: React.FC<CapDetailsProps> = ({ capability, context, onB
             ),
         }
     ];
-
-    const isPoc = 
-        capState.primaryPoc?.Id === Security.currentUserID ||
-        contracts.some((contract) => contract.contractPm?.Id === Security.currentUserID) || 
-        capState.Author?.Id === Security.currentUserID;
-    const canViewContract = Security.IsAdmin || isPoc;
-    const canEdit = Security.IsAdmin || isPoc;
-
-    useEffect(() => {
-        if (activeTab === "contract" && !canViewContract) {
-            onTabChange?.("overview");
-        }
-    }, [activeTab, canViewContract, onTabChange]);
 
     return (
         <div className={styles.dcTracker}>
@@ -631,9 +623,9 @@ export const CapDetails: React.FC<CapDetailsProps> = ({ capability, context, onB
                             }}
                         >
                             <PivotItem itemKey="overview" headerText="Overview" />
-                            <PivotItem itemKey="supporting" headerText="Supporting Info" />
+                            <PivotItem itemKey="supporting" headerText="Technical Info" />
                             <PivotItem itemKey="tagging" headerText="Tagging" />
-                            {canViewContract && <PivotItem itemKey="contract" headerText="Contract" />}
+                            {canViewContract && <PivotItem itemKey="contract" headerText="Supporting Contract(s)" />}
                             <PivotItem itemKey="documentation" headerText="Documentation" />
                         </Pivot>
                     </div>
@@ -664,7 +656,7 @@ export const CapDetails: React.FC<CapDetailsProps> = ({ capability, context, onB
                         )}
 
                         {activeTab === "contract" && canViewContract && (
-                            <ContractInfo contracts={contracts} />
+                            <ContractInfo capability={capState} contracts={contracts} />
                         )}
 
                         {activeTab === "documentation" && (
@@ -744,8 +736,9 @@ export const CapDetails: React.FC<CapDetailsProps> = ({ capability, context, onB
                         try {
                             setSpinnerProps("Editing Capability...");
                             const updatedCapability = await CapabilityService.edit(result.capability);
-                            await ContractService.saveForCapability(updatedCapability.Id, result.contracts, result.deletedContractIds);
+                            await ContractService.saveForCapability(updatedCapability.Id, updatedCapability.Title, result.contracts, result.deletedContractIds);
                             await DataSource.init(true, context);
+                            onContractsChanged?.([...(DataSource.Contracts ?? [])]);
                             setCapState(updatedCapability);
                             setShowCapabilityForm(false);
                             setShowSpinner(false);
@@ -759,6 +752,7 @@ export const CapDetails: React.FC<CapDetailsProps> = ({ capability, context, onB
                         setSpinnerMessage("Deleting Capability...");
                         setShowSpinner(true);
                         try {
+                            await ContractService.removeCapabilityFromAllContracts(capState.Id);
                             await CapabilityService.delete(capState.Id);
                             //setCapState(undefined);
                             setShowCapabilityForm(false);
