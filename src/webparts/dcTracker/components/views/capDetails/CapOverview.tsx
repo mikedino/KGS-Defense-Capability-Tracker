@@ -4,7 +4,6 @@ import { ICapabilityItem } from "../../common/props";
 import { DataSource } from "../../data/ds";
 import styles from "../../Dct.module.scss";
 import { PeoplePersona } from "../../ui/Persona";
-import { ContractService } from "../../services/ContractService";
 
 export interface ICapabilityOverviewProps {
     capState: ICapabilityItem;
@@ -27,11 +26,6 @@ const MultilineDisplay: React.FC<{ label: string; value?: string; emptyText?: st
 );
 
 export const CapabilityOverview: React.FC<ICapabilityOverviewProps> = ({ capState, rightContent }) => {
-    const relatedContracts = DataSource.Contracts
-        .filter((contract) => ContractService.isLinkedToCapability(contract, capState.Id))
-        .map((contract) => contract.Title)
-        .filter(Boolean);
-
     const stakeholders = capState.stakeholders?.results ?? [];
 
     return (
@@ -60,9 +54,14 @@ export const CapabilityOverview: React.FC<ICapabilityOverviewProps> = ({ capStat
                             <Text>{capState.capStatus || "Not set"}</Text>
                         </Stack>
 
-                        <Stack style={{ minWidth: 240 }}>
-                            <Label>Contracts</Label>
-                            <Text>{relatedContracts.length ? relatedContracts.join(", ") : "Not assigned"}</Text>
+                        <Stack style={{ minWidth: 260 }}>
+                            <Label>Capability Type - Tier 1</Label>
+                            <Text>{DataSource.getConfigText("capabilityType", capState.capabilityTypeTier1) || "Not set"}</Text>
+                        </Stack>
+
+                        <Stack style={{ minWidth: 260 }}>
+                            <Label>Capability Type - Tier 2</Label>
+                            <Text>{DataSource.getConfigText("capabilityType", capState.capabilityTypeTier2) || "Not set"}</Text>
                         </Stack>
                     </Stack>
 
@@ -96,6 +95,10 @@ export const CapabilityOverview: React.FC<ICapabilityOverviewProps> = ({ capStat
                         {rightContent}
                     </Stack>
                 )}
+
+                <Stack styles={{ root: { flex: "1 0 100%", minWidth: 0 } }}>
+                    <MultilineDisplay label="Synonyms" value={capState.synonyms} />
+                </Stack>
             </Stack>
         </Stack>
     );

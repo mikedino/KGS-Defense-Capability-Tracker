@@ -1,6 +1,8 @@
 import * as React from "react";
 import {
     ComboBox,
+    Callout,
+    Checkbox,
     DatePicker,
     DayOfWeek,
     DefaultButton,
@@ -41,6 +43,122 @@ export interface IContractFormProps {
 type ContractLookupField = "contractId" | "Title" | "customerContractCode";
 const maxContractSourceResults = 20;
 
+interface IStateAutocompleteProps {
+    value?: string;
+    options: IComboBoxOption[];
+    disabled?: boolean;
+    onChange: (value: string) => void;
+}
+
+const StateAutocomplete: React.FC<IStateAutocompleteProps> = ({ value, options, disabled, onChange }) => {
+    const targetRef = React.useRef<HTMLDivElement>(null);
+    const selectedOption = options.find((option) => String(option.key) === (value ?? ""));
+    const [inputValue, setInputValue] = React.useState<string>(selectedOption?.text ?? "");
+    const [searchQuery, setSearchQuery] = React.useState<string>("");
+    const [isOpen, setIsOpen] = React.useState<boolean>(false);
+    const [activeIndex, setActiveIndex] = React.useState<number>(0);
+
+    React.useEffect(() => {
+        setInputValue(selectedOption?.text ?? "");
+    }, [selectedOption?.key, selectedOption?.text]);
+
+    const filteredOptions = React.useMemo(() => {
+        const search = searchQuery.trim().toLowerCase();
+        if (!search) return options;
+
+        return options.filter((option) =>
+            option.text.toLowerCase().includes(search) || String(option.key).toLowerCase().includes(search)
+        );
+    }, [searchQuery, options]);
+
+    const selectOption = (option: IComboBoxOption): void => {
+        onChange(String(option.key));
+        setInputValue(option.text);
+        setSearchQuery("");
+        setIsOpen(false);
+        setActiveIndex(0);
+    };
+
+    const resetInput = (): void => {
+        setInputValue(selectedOption?.text ?? "");
+        setSearchQuery("");
+        setIsOpen(false);
+        setActiveIndex(0);
+    };
+
+    return (
+        <div ref={targetRef} className={`${styles.formControl} ${styles.stateAutocomplete}`}>
+            <TextField
+                label="State"
+                value={inputValue}
+                placeholder="Search by state name or abbreviation..."
+                disabled={disabled}
+                autoComplete="off"
+                role="combobox"
+                aria-expanded={isOpen}
+                aria-autocomplete="list"
+                onFocus={() => {
+                    setSearchQuery("");
+                    setIsOpen(true);
+                }}
+                onBlur={resetInput}
+                onChange={(_, nextValue) => {
+                    setInputValue(nextValue ?? "");
+                    setSearchQuery(nextValue ?? "");
+                    setIsOpen(true);
+                    setActiveIndex(0);
+                }}
+                onKeyDown={(event) => {
+                    if (event.key === "ArrowDown") {
+                        event.preventDefault();
+                        setIsOpen(true);
+                        setActiveIndex((index) => Math.min(index + 1, Math.max(filteredOptions.length - 1, 0)));
+                    } else if (event.key === "ArrowUp") {
+                        event.preventDefault();
+                        setActiveIndex((index) => Math.max(index - 1, 0));
+                    } else if (event.key === "Enter" && isOpen && filteredOptions[activeIndex]) {
+                        event.preventDefault();
+                        selectOption(filteredOptions[activeIndex]);
+                    } else if (event.key === "Escape") {
+                        event.preventDefault();
+                        resetInput();
+                    }
+                }}
+            />
+
+            {isOpen && !disabled && (
+                <Callout
+                    target={targetRef.current}
+                    directionalHint={DirectionalHint.bottomLeftEdge}
+                    gapSpace={2}
+                    isBeakVisible={false}
+                    setInitialFocus={false}
+                    styles={{ root: { width: targetRef.current?.offsetWidth ?? 280 } }}
+                >
+                    <div className={styles.stateAutocompleteOptions} role="listbox" aria-label="State suggestions">
+                        {filteredOptions.length ? filteredOptions.map((option, index) => (
+                            <button
+                                key={String(option.key) || "not-set"}
+                                type="button"
+                                role="option"
+                                aria-selected={index === activeIndex}
+                                className={`${styles.stateAutocompleteOption} ${index === activeIndex ? styles.stateAutocompleteOptionActive : ""}`}
+                                onMouseDown={(event) => event.preventDefault()}
+                                onMouseEnter={() => setActiveIndex(index)}
+                                onClick={() => selectOption(option)}
+                            >
+                                {option.text}
+                            </button>
+                        )) : (
+                            <div className={styles.stateAutocompleteEmpty}>No matching states</div>
+                        )}
+                    </div>
+                </Callout>
+            )}
+        </div>
+    );
+};
+
 export const ContractForm: React.FC<IContractFormProps> = ({
     item,
     context,
@@ -54,9 +172,12 @@ export const ContractForm: React.FC<IContractFormProps> = ({
         Id: item?.Id || 0,
         capability: { results: item?.capability?.results ?? [] },
         Title: item?.Title || "",
+        synonyms: item?.synonyms || "",
         contractId: item?.contractId || "",
         contractType: item?.contractType || "",
         customerContractCode: item?.customerContractCode || "",
+        isFlagged: item?.isFlagged ?? false,
+        clearance: item?.clearance || "",
         customer: item?.customer || "",
         startDate: item?.startDate || "",
         endDate: item?.endDate || "",
@@ -65,7 +186,11 @@ export const ContractForm: React.FC<IContractFormProps> = ({
         contractValue: item?.contractValue || 0,
         infoLink: item?.infoLink || "",
         ogTitle: item?.ogTitle || "",
-        lobTitle: item?.lobTitle || ""
+        lobTitle: item?.lobTitle || "",
+        city: item?.city || "",
+        state: item?.state || "",
+        country: item?.country || "US",
+        location: item?.location
     });
     const [showDeleteConfirmation, setShowDeleteConfirmation] = React.useState(false);
     const [contractSourceSearchText, setContractSourceSearchText] = React.useState<Record<ContractLookupField, string>>({
@@ -81,10 +206,16 @@ export const ContractForm: React.FC<IContractFormProps> = ({
     type CustomerType = IContractItem["customer"];
     type PartnerType = IContractItem["partner"];
     type ContractType = IContractItem["contractType"];
+    type ClearanceType = IContractItem["clearance"];
 
     const customerOptions = React.useMemo<IDropdownOption[]>(() => DataSource.getConfigOptions("customer"), []);
     const partnerOptions = React.useMemo<IDropdownOption[]>(() => DataSource.getConfigOptions("partner"), []);
     const contractTypeOptions = React.useMemo<IDropdownOption[]>(() => DataSource.getConfigOptions("contractType"), []);
+    const clearanceOptions = React.useMemo<IDropdownOption[]>(() => DataSource.getConfigOptions("contractClearance"), []);
+    const allStateOptions = React.useMemo<IComboBoxOption[]>(() => [
+        { key: "", text: "Not set" },
+        ...DataSource.getConfigOptions("state")
+    ], []);
     const contractSources = React.useMemo<IContractSourceItem[]>(() => DataSource.ContractSources ?? [], []);
 
     // Read a normalized source field so all three lookup boxes can share filtering and rendering.
@@ -320,6 +451,11 @@ export const ContractForm: React.FC<IContractFormProps> = ({
     };
 
     const handleSave = (): void => {
+        if (formData.country && formData.country.length !== 2) {
+            setFormMessage("Country must be a two-letter ISO country code, such as US.");
+            return;
+        }
+
         const duplicateContract = findDuplicateContract();
 
         if (duplicateContract && !allowExistingContractSave) {
@@ -350,7 +486,7 @@ export const ContractForm: React.FC<IContractFormProps> = ({
                     </MessageBar>
                 )}
 
-                <div className={styles.formGrid}>
+                <div className={styles.contractFormHeaderGrid}>
                     <ComboBox
                         label="Contract Title"
                         className={styles.formControl}
@@ -367,6 +503,16 @@ export const ContractForm: React.FC<IContractFormProps> = ({
                             option?: IComboBoxOption
                         ) => handleContractSourceSelect(option)}
                         required
+                    />
+
+                    <Checkbox
+                        label="Flag"
+                        checked={formData.isFlagged ?? false}
+                        disabled={!canEdit}
+                        className={styles.contractFlagCheckbox}
+                        title="Flag this contract to hide details from general users"
+                        ariaLabel="Flag this contract to hide details from general users"
+                        onChange={(_, checked) => handleChange("isFlagged", checked ?? false)}
                     />
                 </div>
 
@@ -424,6 +570,26 @@ export const ContractForm: React.FC<IContractFormProps> = ({
                         disabled={!canEdit}
                         onChange={(_, val) => handleContractValueChange(val)}
                         onBlur={handleContractValueBlur}
+                    />
+
+                    <Dropdown
+                        label="Clearance Level"
+                        className={styles.formControl}
+                        selectedKey={formData.clearance || undefined}
+                        options={clearanceOptions}
+                        disabled={!canEdit}
+                        onChange={(_, option) => {
+                            if (option) handleChange("clearance", option.key as ClearanceType);
+                        }}
+                    />
+
+                    <TextField
+                        label="Synonyms"
+                        className={styles.formControl}
+                        value={formData.synonyms ?? ""}
+                        maxLength={255}
+                        disabled={!canEdit}
+                        onChange={(_, val) => handleChange("synonyms", val ?? "")}
                     />
                 </div>
 
@@ -486,6 +652,37 @@ export const ContractForm: React.FC<IContractFormProps> = ({
                         onSelectDate={(date) => handleChange("endDate", date ? date.toISOString() : "")}
                         allowTextInput
                         formatDate={onFormatDate}
+                    />
+                </div>
+
+                <div className={styles.formGridThree}>
+                    <TextField
+                        label="City"
+                        className={styles.formControl}
+                        value={formData.city ?? ""}
+                        maxLength={255}
+                        disabled={!canEdit}
+                        onChange={(_, val) => handleChange("city", val ?? "")}
+                    />
+
+                    <StateAutocomplete
+                        value={formData.state}
+                        options={allStateOptions}
+                        disabled={!canEdit}
+                        onChange={(state) => handleChange("state", state)}
+                    />
+
+                    <TextField
+                        label="Country"
+                        description="Two-letter ISO country code"
+                        className={styles.formControl}
+                        value={formData.country ?? ""}
+                        maxLength={2}
+                        disabled={!canEdit}
+                        onChange={(_, val) => handleChange(
+                            "country",
+                            (val ?? "").replace(/[^a-z]/gi, "").toUpperCase().slice(0, 2)
+                        )}
                     />
                 </div>
 

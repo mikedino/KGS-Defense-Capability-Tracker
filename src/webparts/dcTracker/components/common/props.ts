@@ -26,18 +26,20 @@ export interface IPeoplePickerExtended extends IPeoplePicker {
 export type licenseReqdChoices = "Yes" | "No";
 export type ConfigType =
     | "backend"
+    | "capabilityType"
     | "capabilityStatus"
     | "codingLanguage"
     | "compliance"
     | "connectivity"
     | "cdocType"
+    | "contractClearance"
     | "contractType"
+    | "state"
     | "customer"
     | "partner"
     | "hostingEnvironment"
     | "platform"
-    | "documentType"
-    | "solutionType";
+    | "documentType";
 //export type CapabilityStatus = "Active" | "In Dev" | "Pending"
 
 export interface ICapabilityItem {
@@ -47,16 +49,18 @@ export interface ICapabilityItem {
 
     /* OVERVIEW */
     Title: string;
+    synonyms?: string;
     description?: string;  //multi-line
     capabilities?: string; //multi-line
     link?: string;
     capStatus: string; //config
+    capabilityTypeTier1?: string; //config
+    capabilityTypeTier2?: string; //config
     primaryPoc?: IPeoplePickerExtended; //Capability Primary POC
     stakeholders?: { results: IPeoplePickerExtended[] }
     notes?: string; //multi-line
 
     /* TECHNICAL INFO */
-    solutionType?: string; //config
     platform: string; //config
     hostingEnv?: string; //config
     connectivity: string; //config
@@ -81,8 +85,11 @@ export interface IContractItem {
     readonly Id: number;
     capability?: { results: ILookupItem[] };
     Title: string; //Contract Title
+    synonyms?: string;
     contractId?: string;
     customerContractCode?: string;
+    isFlagged?: boolean;
+    clearance?: string;
     contractType?: string;
     contractValue: number;
     customer?: string;
@@ -93,6 +100,10 @@ export interface IContractItem {
     infoLink?: string;
     ogTitle?: string;
     lobTitle?: string;
+    city?: string;
+    state?: string; // ISO 3166-2 subdivision abbreviation, such as VA
+    country?: string; // ISO 3166-1 alpha-2 country code, such as US
+    readonly location?: string; // SharePoint calculated field: City, State (Country)
 }
 
 export interface ICapabilityContractDraft extends IContractItem {

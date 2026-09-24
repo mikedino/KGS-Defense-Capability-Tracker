@@ -85,7 +85,7 @@ export const CapForm: React.FC<ICapFormProps> = ({ item, context, onSave, onDele
     const [selectedContractSummary, setSelectedContractSummary] = React.useState<string>("");
 
     type CapStatusType = ICapabilityItem["capStatus"];
-    type SolutionType = ICapabilityItem["solutionType"];
+    type CapabilityType = ICapabilityItem["capabilityTypeTier1"];
     type PlatformType = ICapabilityItem["platform"];
     type HostingEnvType = ICapabilityItem["hostingEnv"];
     type ConnectivityType = ICapabilityItem["connectivity"];
@@ -96,14 +96,16 @@ export const CapForm: React.FC<ICapFormProps> = ({ item, context, onSave, onDele
     const [formData, setFormData] = React.useState<ICapabilityItem>({
         Id: item?.Id || 0,
         Title: item?.Title || "",
+        synonyms: item?.synonyms || "",
         description: item?.description || "",
         capabilities: item?.capabilities || "",
         link: item?.link || "",
         capStatus: item?.capStatus || "",
+        capabilityTypeTier1: item?.capabilityTypeTier1 || "",
+        capabilityTypeTier2: item?.capabilityTypeTier2 || "",
         primaryPoc: item?.primaryPoc?.Id ? item.primaryPoc : undefined,
         stakeholders: { results: item?.stakeholders?.results ?? [] },
         notes: item?.notes || "",
-        solutionType: item?.solutionType || "",
         platform: item?.platform || "",
         hostingEnv: item?.hostingEnv || "",
         connectivity: item?.connectivity || "",
@@ -123,7 +125,10 @@ export const CapForm: React.FC<ICapFormProps> = ({ item, context, onSave, onDele
     });
 
     const capStatusOptions = React.useMemo<IDropdownOption[]>(() => DataSource.getConfigOptions("capabilityStatus"), []);
-    const solutionTypeOptions = React.useMemo<IDropdownOption[]>(() => DataSource.getConfigOptions("solutionType"), []);
+    const capabilityTypeOptions = React.useMemo<IDropdownOption[]>(() => [
+        { key: "", text: "Not set" },
+        ...DataSource.getConfigOptions("capabilityType")
+    ], []);
     const platformOptions = React.useMemo<IDropdownOption[]>(() => DataSource.getConfigOptions("platform"), []);
     const hostingEnvOptions = React.useMemo<IDropdownOption[]>(() => DataSource.getConfigOptions("hostingEnvironment"), []);
     const connectivityOptions = React.useMemo<IDropdownOption[]>(() => DataSource.getConfigOptions("connectivity"), []);
@@ -670,7 +675,7 @@ export const CapForm: React.FC<ICapFormProps> = ({ item, context, onSave, onDele
                         </div>
 
                         <div className={styles.formGridTwo}>
-                            <div className={styles.formFieldFull}>
+                            <div className={`${styles.capabilityNameGrid} ${styles.formFieldFull}`}>
                                 <TextField
                                     label="Capability Name"
                                     className={styles.formControl}
@@ -679,6 +684,14 @@ export const CapForm: React.FC<ICapFormProps> = ({ item, context, onSave, onDele
                                     required
                                     maxLength={255}
                                     errorMessage={submitted ? titleError : undefined}
+                                />
+
+                                <TextField
+                                    label="Synonyms"
+                                    className={styles.formControl}
+                                    value={formData.synonyms ?? ""}
+                                    maxLength={255}
+                                    onChange={(_, val) => handleChange("synonyms", val ?? "")}
                                 />
                             </div>
 
@@ -706,23 +719,57 @@ export const CapForm: React.FC<ICapFormProps> = ({ item, context, onSave, onDele
                                 />
                             </div>
 
-                            <Dropdown
-                                label="Capability Status"
-                                className={styles.formControl}
-                                selectedKey={formData.capStatus || undefined}
-                                options={capStatusOptions}
-                                onChange={(_, option) => {
-                                    if (option) handleChange("capStatus", option.key as CapStatusType);
-                                }}
-                            />
+                            <div className={styles.formFieldFull}>
+                                <div className={styles.formFieldHalf}>
+                                    <Dropdown
+                                        label="Capability Status"
+                                        className={styles.formControl}
+                                        selectedKey={formData.capStatus || undefined}
+                                        options={capStatusOptions}
+                                        onChange={(_, option) => {
+                                            if (option) handleChange("capStatus", option.key as CapStatusType);
+                                        }}
+                                    />
+                                </div>
+                            </div>
 
-                            <TextField
-                                label="Link/URL"
-                                className={styles.formControl}
-                                value={formData.link ?? ""}
-                                maxLength={255}
-                                onChange={(_, val) => handleChange("link", val ?? "")}
-                            />
+                            <div>
+                                <Dropdown
+                                    label="Capability Type - Tier 1"
+                                    className={styles.formControl}
+                                    placeholder="Select the primary capability type"
+                                    selectedKey={formData.capabilityTypeTier1 ?? ""}
+                                    options={capabilityTypeOptions}
+                                    onChange={(_, option) => {
+                                        if (option) handleChange("capabilityTypeTier1", option.key as CapabilityType);
+                                    }}
+                                />
+                                <FieldHelp>The primary category for this capability.</FieldHelp>
+                            </div>
+
+                            <div>
+                                <Dropdown
+                                    label="Capability Type - Tier 2"
+                                    className={styles.formControl}
+                                    placeholder="Select an optional secondary capability type"
+                                    selectedKey={formData.capabilityTypeTier2 ?? ""}
+                                    options={capabilityTypeOptions}
+                                    onChange={(_, option) => {
+                                        if (option) handleChange("capabilityTypeTier2", option.key as CapabilityType);
+                                    }}
+                                />
+                                <FieldHelp>An optional secondary category for cross-cutting capabilities.</FieldHelp>
+                            </div>
+
+                            <div className={styles.formFieldFull}>
+                                <TextField
+                                    label="Link/URL"
+                                    className={styles.formControl}
+                                    value={formData.link ?? ""}
+                                    maxLength={255}
+                                    onChange={(_, val) => handleChange("link", val ?? "")}
+                                />
+                            </div>
 
                             <div className={styles.formFieldFull}>
                                 <TextField
@@ -779,19 +826,6 @@ export const CapForm: React.FC<ICapFormProps> = ({ item, context, onSave, onDele
                         </div>
 
                         <div className={styles.formGridTwo}>
-                            <div>
-                                <Dropdown
-                                    label="Solution Type"
-                                    className={styles.formControl}
-                                    selectedKey={formData.solutionType || undefined}
-                                    options={solutionTypeOptions}
-                                    onChange={(_, option) => {
-                                        if (option) handleChange("solutionType", option.key as SolutionType);
-                                    }}
-                                />
-                                <FieldHelp>What kind of capability this is?</FieldHelp>
-                            </div>
-
                             <div>
                                 <Dropdown
                                     label="Platform"

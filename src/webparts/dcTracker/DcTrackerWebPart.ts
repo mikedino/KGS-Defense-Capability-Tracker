@@ -14,7 +14,6 @@ import { Security } from './components/services/Security';
 import Strings, { setContext } from './components/common/strings';
 import * as strings from 'DcTrackerWebPartStrings';
 import { formatError } from './components/common/utils';
-import { InstallationModal } from './components/services/Installer';
 import { IDCTrackerProps } from './components/common/props';
 
 export interface IDcTrackerWebPartProps {
@@ -23,6 +22,9 @@ export interface IDcTrackerWebPartProps {
 
 export default class DcTrackerWebPart extends BaseClientSideWebPart<IDcTrackerWebPartProps> {
 
+  private _renderContent(element: React.ReactElement): void {
+    ReactDom.render(element, this.domElement);
+  }
 
   public _renderTracker(): void {
     const element: React.ReactElement<IDCTrackerProps> = React.createElement(
@@ -33,16 +35,17 @@ export default class DcTrackerWebPart extends BaseClientSideWebPart<IDcTrackerWe
       }
     );
 
-    ReactDom.render(element, this.domElement);
+    this._renderContent(element);
   }
 
   private _renderError(error: string): void {
-    this.domElement.innerHTML = `
-      <div class="pad">
-        <h3>${Strings.ProjectName} Application</h3>
-        <p>This solution requires setup. Please contact your administrator.</p>
-        <p>Error Message: ${error}</p>
-      </div>`;
+    this._renderContent(React.createElement(
+      'div',
+      { className: 'pad', 'data-dct-startup-error': true },
+      React.createElement('h3', null, `${Strings.ProjectName} Application`),
+      React.createElement('p', null, 'The application could not finish starting. Please contact your administrator.'),
+      React.createElement('p', null, `Error Message: ${error}`)
+    ));
   }
 
   public async render(): Promise<void> {
@@ -54,50 +57,38 @@ export default class DcTrackerWebPart extends BaseClientSideWebPart<IDcTrackerWe
     Configuration.setWebUrl(this.context.pageContext.web.serverRelativeUrl);
 
     try {
-
       console.log(`[${Strings.ProjectName}] Initialize Security Class`);
       await Security.init();
+    } catch (err) {
+      const message = formatError(err);
+      console.error(`[${Strings.ProjectName}] Security initialization error:`, message, err);
+      this._renderError(`Unable to initialize application security. ${message}`);
+      return;
+    }
 
-      const inAdminGroup = await Security.hasPermissions();
+    // DCT administrators manage application data, but only SharePoint site installers
+    // should run the list/schema check. The installer requires web-level permissions.
+    const canCheckInstallation = ContextInfo.isSiteAdmin || ContextInfo.isSiteOwner;
 
-      console.log(`[${Strings.ProjectName}] Checking user permissions`);
-      const hasFullControl = ContextInfo.isSiteAdmin || ContextInfo.isSiteOwner || inAdminGroup;
-
-      if (hasFullControl) {
-        //only Admins check if install is reqd
+    if (canCheckInstallation) {
+      try {
+        console.log(`[${Strings.ProjectName}] Checking SharePoint configuration`);
         const requiresInstall = await InstallationRequired.requiresInstall({ cfg: Configuration });
+
         if (requiresInstall) {
           InstallationRequired.showDialog();
-        } else {
-          console.log(`[${Strings.ProjectName}] Installation complete. Render web part.`);
-          this._renderTracker();
           return;
         }
-      } else {
-        console.log(`[${Strings.ProjectName}] Installation complete. Render web part.`);
-        this._renderTracker();
+      } catch (err) {
+        const message = formatError(err);
+        console.error(`[${Strings.ProjectName}] Configuration check error:`, message, err);
+        this._renderError(`Unable to verify the SharePoint configuration. ${message}`);
         return;
       }
-
-    } catch (err) {
-      
-      console.error(`[${Strings.ProjectName}] Installation error:`, formatError(err));
-
-      console.warn(`[${Strings.ProjectName}] Attempting to run the install...`);
-
-      // If init fails (e.g., groups missing), run the installation modal
-      // fallback - SHOULD BE A ONE TIME RUN ON FIRST INSTALL
-      try {
-        await InstallationModal.show(true, () => {
-          console.log(`[${Strings.ProjectName}] Installation complete. Rendering web part.`);
-          this._renderTracker();
-        });
-      } catch (modalErr) {
-        console.error(`[${Strings.ProjectName}] Installation error:`, formatError(modalErr));
-        this._renderError(formatError(modalErr));
-      }
-
     }
+
+    console.log(`[${Strings.ProjectName}] Installation complete. Render web part.`);
+    this._renderTracker();
 
   }
 

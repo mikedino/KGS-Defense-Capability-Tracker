@@ -16,6 +16,7 @@ export class Security {
 
     // initialize object
     private static _listSecurity: ListSecurity | undefined;
+    private static _initPromise: Promise<void> | undefined;
 
     // Admin
     private static _isAdmin = false;
@@ -59,10 +60,17 @@ export class Security {
 
     // Initializes the class
     static init(): Promise<void> {
-        return new Promise((resolve, reject) => {
+        if (this._initPromise) return this._initPromise;
+
+        const initialize = new Promise<void>((resolve, reject) => {
 
             // set the user ID
             this.currentUserID = ContextInfo.userId;
+            this._isAdmin = false;
+            this._isContributor = false;
+            this._isVisitor = false;
+            this._canViewCaps = false;
+            this.RoleDisplay = "NoRole";
 
             this._listSecurity = new ListSecurity({
                 webUrl: Strings.Sites.main.url,
@@ -133,6 +141,38 @@ export class Security {
                         listName: Strings.Sites.main.lists.Contracts,
                         groupName: Strings.Groups.Visitors,
                         permission: SPTypes.RoleType.Reader
+                    },
+                    //Contract Capability Summary list
+                    {
+                        listName: Strings.Sites.main.lists.ContractCapabilitySummary,
+                        groupName: Strings.Groups.Admins,
+                        permission: SPTypes.RoleType.Administrator
+                    },
+                    {
+                        listName: Strings.Sites.main.lists.ContractCapabilitySummary,
+                        groupName: Strings.Groups.Contributors,
+                        permission: SPTypes.RoleType.Contributor
+                    },
+                    {
+                        listName: Strings.Sites.main.lists.ContractCapabilitySummary,
+                        groupName: Strings.Groups.Visitors,
+                        permission: SPTypes.RoleType.Reader
+                    },
+                    //Contract Documents library
+                    {
+                        listName: Strings.Sites.main.lists.ContractDocuments,
+                        groupName: Strings.Groups.Admins,
+                        permission: SPTypes.RoleType.Administrator
+                    },
+                    {
+                        listName: Strings.Sites.main.lists.ContractDocuments,
+                        groupName: Strings.Groups.Contributors,
+                        permission: SPTypes.RoleType.Contributor
+                    },
+                    {
+                        listName: Strings.Sites.main.lists.ContractDocuments,
+                        groupName: Strings.Groups.Visitors,
+                        permission: SPTypes.RoleType.Reader
                     }
                 ],
                 onGroupsLoaded: () => {
@@ -141,35 +181,49 @@ export class Security {
                     this._contributors = this._listSecurity?.getGroup(Strings.Groups.Contributors);
                     this._visitors = this._listSecurity?.getGroup(Strings.Groups.Visitors);
 
-                    // Every authenticated person who can view apps is an app user.
-                    this.loadReportPermissions().then(() => {
-                        // Set the user flags
-                        if (this._listSecurity) {
-                            if (this._listSecurity.isInGroup(ContextInfo.userId, Strings.Groups.Admins)) {
-                                this._isAdmin = true;
-                                this._isContributor = true;
-                                this.RoleDisplay = "Administrator";
-                            } else if (this._listSecurity.isInGroup(ContextInfo.userId, Strings.Groups.Contributors)) {
-                                this._isContributor = true;
-                                this.RoleDisplay = "Contributor";
-                            } else if (this._listSecurity.isInGroup(ContextInfo.userId, Strings.Groups.Visitors) || this._canViewCaps) {
-                                this._isVisitor = true;
-                                this.RoleDisplay = "Visitor";
-                            } else {
-                                this.RoleDisplay = "NoRole";
-                            }
-                        }
-                    }).catch(reject);
-
                     // Ensure the groups exist
-                    if (this._admins && this._contributors && this._visitors) {
-                        resolve();
-                    } else {
-                        reject();
+                    const missingGroups = [
+                        !this._admins ? Strings.Groups.Admins : "",
+                        !this._contributors ? Strings.Groups.Contributors : "",
+                        !this._visitors ? Strings.Groups.Visitors : ""
+                    ].filter(Boolean);
+
+                    if (missingGroups.length) {
+                        reject(new Error(`Missing security group(s): ${missingGroups.join(", ")}`));
+                        return;
                     }
+
+                    // Every authenticated person who can view apps is an app user.
+                    // Wait for this check before resolving so the role flags are ready
+                    // before the web part decides what to render.
+                    this.loadReportPermissions().then(() => {
+                        if (this._listSecurity?.isInGroup(ContextInfo.userId, Strings.Groups.Admins)) {
+                            this._isAdmin = true;
+                            this._isContributor = true;
+                            this.RoleDisplay = "Administrator";
+                        } else if (this._listSecurity?.isInGroup(ContextInfo.userId, Strings.Groups.Contributors)) {
+                            this._isContributor = true;
+                            this.RoleDisplay = "Contributor";
+                        } else if (this._listSecurity?.isInGroup(ContextInfo.userId, Strings.Groups.Visitors) || this._canViewCaps) {
+                            this._isVisitor = true;
+                            this.RoleDisplay = "Visitor";
+                        }
+
+                        resolve();
+                    }).catch(reject);
                 }
             });
         });
+
+        // Workbench can invoke render more than once while the first initialization
+        // is still running. Share a single promise so those calls cannot replace the
+        // ListSecurity instance out from under an earlier callback.
+        this._initPromise = initialize.catch((error: unknown) => {
+            this._initPromise = undefined;
+            throw error;
+        });
+
+        return this._initPromise;
     }
 
     // check to see if user can view apps list

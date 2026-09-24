@@ -35,22 +35,26 @@ type DialogMode = "add" | "edit" | "delete" | "error" | undefined;
 
 const knownConfigTypes: { key: ConfigType; displayName: string }[] = [
     { key: "backend", displayName: "Backend" },
+    { key: "capabilityType", displayName: "Capability Type" },
     { key: "capabilityStatus", displayName: "Capability Status" },
     { key: "codingLanguage", displayName: "Coding Language" },
     { key: "compliance", displayName: "Compliance" },
     { key: "connectivity", displayName: "Connectivity" },
+    { key: "contractClearance", displayName: "Contract Clearance" },
+    { key: "state", displayName: "State" },
     { key: "customer", displayName: "Customer" },
     { key: "partner", displayName: "Relevant Partner Tag" },
     { key: "hostingEnvironment", displayName: "Hosting Environment" },
     { key: "platform", displayName: "Platform" },
-    { key: "solutionType", displayName: "Solution Type" },
     { key: "documentType", displayName: "Document Type" }
 ];
 
 const getTypeKeys = (items: IConfigItem[]): string[] => {
     const unique = Array.from(new Set([
         ...knownConfigTypes.map(type => type.key),
-        ...items.map(i => (i.configType ?? "").trim()).filter(Boolean)
+        ...items
+            .map(i => (i.configType ?? "").trim())
+            .filter(key => Boolean(key) && key !== "solutionType")
     ]));
 
     return unique.sort((a, b) => {

@@ -56,6 +56,9 @@ export const ContractInfo: React.FC<IContractInfoProps> = ({ capability, contrac
                     key={contract.Id}
                     contract={contract}
                     eyebrow={`Contract ${index + 1} of ${contracts.length}`}
+                    collapsible={true}
+                    defaultExpanded={false}
+                    showHeaderSummary={true}
                     documentsContent={(
                         <ContractDocumentsPanel
                             documents={contractDocumentsById.get(contract.Id) ?? []}

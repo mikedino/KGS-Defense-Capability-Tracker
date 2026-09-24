@@ -5,6 +5,7 @@ import { ConfigType, ICapabilityItem, ICMSContractItem, IConfigItem, IContractCa
 import { formatError } from "../common/utils";
 import { ConfigService } from "../services/ConfigService";
 import { parseJsonTagField } from "../common/tagUtils";
+import { Security } from "../services/Security";
 
 export interface IConfigOption {
     key: string;
@@ -76,13 +77,29 @@ export class DataSource {
     }
 
     static getConfigOptions(configType: ConfigType | string): IConfigOption[] {
+        const seenValues = new Set<string>();
+
         return (this._configByType.get(configType) ?? [])
             .filter(item => item.isActive !== false)
             .sort((a, b) => (a.sortOrder ?? 9999) - (b.sortOrder ?? 9999) || (a.Title ?? "").localeCompare(b.Title ?? ""))
+            .filter(item => {
+                const valueKey = (item.configValue ?? "").trim().toLowerCase();
+                if (!valueKey || seenValues.has(valueKey)) return false;
+                seenValues.add(valueKey);
+                return true;
+            })
             .map(item => ({
                 key: item.configValue,
                 text: item.Title || item.configValue
             }));
+    }
+
+    static getConfigText(configType: ConfigType | string, configValue?: string): string {
+        if (!configValue) return "";
+
+        const match = (this._configByType.get(configType) ?? [])
+            .find(item => item.configValue === configValue);
+        return match?.Title || configValue;
     }
 
     // get/set config
@@ -142,13 +159,16 @@ export class DataSource {
 
     // Load the Contracts
     static contractQuerySelect: string[] = [
-        "Id", "Title", "capability/Id", "capability/Title", "contractId", "customerContractCode", "customer",
-        "startDate", "endDate", "partner", "infoLink", "ogTitle", "lobTitle", "contractType","contractValue",
+        "Id", "Title", "synonyms", "capability/Id", "capability/Title", "contractId", "customerContractCode", "customer",
+        "startDate", "endDate", "partner", "infoLink", "ogTitle", "lobTitle", "contractType", "contractValue",
+        "isFlagged", "clearance", "city", "state", "country", "location",
         "contractPm/Id", "contractPm/Title", "contractPm/EMail", "contractPm/JobTitle", "contractPm/Department"
     ];
     static contractQueryExpand: string[] = ["capability", "contractPm"];
     private static _contracts: IContractItem[] = [];
-    static get Contracts(): IContractItem[] { return this._contracts; }
+    static get Contracts(): IContractItem[] {
+        return Security.IsAdmin ? this._contracts : this._contracts.filter((contract) => !contract.isFlagged);
+    }
     // Refresh only DCTContracts so local duplicate checks stay current without reloading source contract systems.
     static refreshContracts(): Promise<IContractItem[]> {
         return this.getContracts();
@@ -171,7 +191,7 @@ export class DataSource {
                 (items) => {
                     if (items?.results?.length) {
                         this._contracts = items.results as unknown as IContractItem[];
-                        resolve(this._contracts);
+                        resolve(this.Contracts);
                     } else {
                         //none found - resolve with empty array
                         resolve([])
@@ -225,8 +245,8 @@ export class DataSource {
 
     // Load the Capabilities
     static capabilityQuerySelect: string[] = [
-        "Id", "Title", "description", "capabilities", "link", "capStatus", "notes",
-        "solutionType", "platform", "hostingEnv", "connectivity", "compliance", "licenseReqd",
+        "Id", "Title", "synonyms", "description", "capabilities", "link", "capStatus", "notes",
+        "capabilityTypeTier1", "capabilityTypeTier2", "platform", "hostingEnv", "connectivity", "compliance", "licenseReqd",
         "licenseReqmts", "extensibility", "serverReqmts", "codeLanguage", "backend",
         "oppNetTagsJson", "pastPerformanceTagsJson", "proposalTagsJson", "Modified",
         "primaryPoc/Id", "primaryPoc/Title", "primaryPoc/EMail",
@@ -393,8 +413,8 @@ export class DataSource {
         return new Promise<ICMSContractItem[]>((resolve, reject) => {
             this._cmsContracts = [];
 
-            Web(Strings.Sites.cms.url)
-                .Lists(Strings.Sites.cms.lists.Contracts)
+            Web(Strings.Sites.contracts.url)
+                .Lists(Strings.Sites.contracts.lists.CMSArchive)
                 .Items()
                 .query({
                     GetAllItems: true,
@@ -509,8 +529,8 @@ export class DataSource {
         return new Promise<IOgItem[]>((resolve, reject) => {
             this._ogs = [];
 
-            Web(Strings.Sites.orgLookups.url)
-                .Lists(Strings.Sites.orgLookups.lists.OGs)
+            Web(Strings.Sites.contracts.url)
+                .Lists(Strings.Sites.contracts.lists.OGs)
                 .Items()
                 .query({
                     GetAllItems: true,

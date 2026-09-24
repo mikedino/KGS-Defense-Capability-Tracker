@@ -1,5 +1,5 @@
 import * as React from "react";
-import { IColumn, Link, PrimaryButton, SearchBox, SelectionMode, Stack, Text } from "@fluentui/react";
+import { Dropdown, IColumn, IDropdownOption, Icon, IconButton, Link, PrimaryButton, SearchBox, SelectionMode, Stack, Text } from "@fluentui/react";
 import PaginatedDetailsList from "../ui/PaginatedDetailsList";
 import { formatDate } from "../common/utils";
 import styles from "../Dct.module.scss";
@@ -15,31 +15,81 @@ interface IContractsListProps {
 
 const renderPerson = (p?: IPeoplePickerExtended): string => p?.Title ?? "";
 
+const getFilterOptions = (allText: string, values: Array<string | undefined>): IDropdownOption[] => [
+  { key: "all", text: allText },
+  ...Array.from(new Set(values.map((value) => value?.trim()).filter((value): value is string => Boolean(value))))
+    .sort((a, b) => a.localeCompare(b))
+    .map((value) => ({ key: value, text: value }))
+];
+
 export const ContractsList: React.FunctionComponent<IContractsListProps> = ({ contracts, onSelectContract, onNewContract }) => {
   const [searchTerm, setSearchTerm] = React.useState<string>("");
+  const [ogFilter, setOgFilter] = React.useState<string>("all");
+  const [customerFilter, setCustomerFilter] = React.useState<string>("all");
+  const [partnerFilter, setPartnerFilter] = React.useState<string>("all");
+  const [clearanceFilter, setClearanceFilter] = React.useState<string>("all");
   const [sortColumnKey, setSortColumnKey] = React.useState<string | null>("title");
   const [isSortedDescending, setIsSortedDescending] = React.useState<boolean>(false);
 
+  const ogOptions = React.useMemo<IDropdownOption[]>(
+    () => getFilterOptions("All OGs", contracts.map((contract) => contract.ogTitle)),
+    [contracts]
+  );
+  const customerOptions = React.useMemo<IDropdownOption[]>(
+    () => getFilterOptions("All Customers", contracts.map((contract) => contract.customer)),
+    [contracts]
+  );
+  const partnerOptions = React.useMemo<IDropdownOption[]>(
+    () => getFilterOptions("All Partners", contracts.map((contract) => contract.partner)),
+    [contracts]
+  );
+  const clearanceOptions = React.useMemo<IDropdownOption[]>(
+    () => getFilterOptions("All Clearance Levels", contracts.map((contract) => contract.clearance)),
+    [contracts]
+  );
+
   const filteredContracts = React.useMemo(() => {
     const search = searchTerm.trim().toLowerCase();
-    if (!search) return contracts;
-
     return contracts.filter((contract) => {
-      return (
+      const matchesSearch = !search || (
         (contract.Title ?? "").toLowerCase().includes(search) ||
+        (contract.synonyms ?? "").toLowerCase().includes(search) ||
         (contract.contractId ?? "").toLowerCase().includes(search) ||
         (contract.customerContractCode ?? "").toLowerCase().includes(search) ||
         (contract.customer ?? "").toLowerCase().includes(search) ||
+        (contract.clearance ?? "").toLowerCase().includes(search) ||
         (contract.ogTitle ?? "").toLowerCase().includes(search) ||
         (contract.lobTitle ?? "").toLowerCase().includes(search) ||
+        (contract.location ?? "").toLowerCase().includes(search) ||
         (contract.contractPm?.Title ?? "").toLowerCase().includes(search) ||
         (contract.partner ?? "").toLowerCase().includes(search) ||
         ContractService.getCapabilityLookups(contract).some((capability) =>
           (capability.Title ?? "").toLowerCase().includes(search)
         )
       );
+
+      const matchesOg = ogFilter === "all" || contract.ogTitle === ogFilter;
+      const matchesCustomer = customerFilter === "all" || contract.customer === customerFilter;
+      const matchesPartner = partnerFilter === "all" || contract.partner === partnerFilter;
+      const matchesClearance = clearanceFilter === "all" || contract.clearance === clearanceFilter;
+
+      return matchesSearch && matchesOg && matchesCustomer && matchesPartner && matchesClearance;
     });
-  }, [contracts, searchTerm]);
+  }, [contracts, searchTerm, ogFilter, customerFilter, partnerFilter, clearanceFilter]);
+
+  const filtersActive = searchTerm !== ""
+    || ogFilter !== "all"
+    || customerFilter !== "all"
+    || partnerFilter !== "all"
+    || clearanceFilter !== "all";
+
+  const handleResetFilters = (): void => {
+    setSearchTerm("");
+    setOgFilter("all");
+    setCustomerFilter("all");
+    setPartnerFilter("all");
+    setClearanceFilter("all");
+  };
 
   const sortedContracts = React.useMemo(() => {
     if (!sortColumnKey) return filteredContracts;
@@ -61,13 +111,17 @@ export const ContractsList: React.FunctionComponent<IContractsListProps> = ({ co
           aVal = (a.customer || "").toLowerCase();
           bVal = (b.customer || "").toLowerCase();
           break;
+        case "location":
+          aVal = (a.location || "").toLowerCase();
+          bVal = (b.location || "").toLowerCase();
+          break;
         case "ogTitle":
           aVal = (a.ogTitle || "").toLowerCase();
           bVal = (b.ogTitle || "").toLowerCase();
           break;
-        case "lobTitle":
-          aVal = (a.lobTitle || "").toLowerCase();
-          bVal = (b.lobTitle || "").toLowerCase();
+        case "clearance":
+          aVal = (a.clearance || "").toLowerCase();
+          bVal = (b.clearance || "").toLowerCase();
           break;
         case "startDate":
           aVal = a.startDate ? new Date(a.startDate).getTime() : 0;
@@ -114,16 +168,26 @@ export const ContractsList: React.FunctionComponent<IContractsListProps> = ({ co
       ...sortable("title"),
       onRender: (item: IContractItem) => (
         <Stack>
-          <Link
-            className={styles.listTitleLink}
-            onClick={(ev) => {
-              ev?.preventDefault();
-              ev?.stopPropagation();
-              onSelectContract(item);
-            }}
-          >
-            {item.Title}
-          </Link>
+          <Stack horizontal verticalAlign="center" tokens={{ childrenGap: 6 }}>
+            {item.isFlagged && (
+              <Icon
+                iconName="Flag"
+                className={styles.contractFlagIconSmall}
+                title="Flagged contract"
+                ariaLabel="Flagged contract"
+              />
+            )}
+            <Link
+              className={styles.listTitleLink}
+              onClick={(ev) => {
+                ev?.preventDefault();
+                ev?.stopPropagation();
+                onSelectContract(item);
+              }}
+            >
+              {item.Title}
+            </Link>
+          </Stack>
           <Text variant="small">{item.contractId || ""}</Text>
         </Stack>
       )
@@ -148,14 +212,14 @@ export const ContractsList: React.FunctionComponent<IContractsListProps> = ({ co
       onRender: (item: IContractItem) => <Text>{item.ogTitle || ""}</Text>
     },
     {
-      key: "lobTitle",
-      name: "LOB",
-      fieldName: "lobTitle",
-      minWidth: 90,
-      maxWidth: 130,
+      key: "clearance",
+      name: "Clearance Level",
+      fieldName: "clearance",
+      minWidth: 105,
+      maxWidth: 140,
       isResizable: true,
-      ...sortable("lobTitle"),
-      onRender: (item: IContractItem) => <Text>{item.lobTitle || ""}</Text>
+      ...sortable("clearance"),
+      onRender: (item: IContractItem) => <Text>{item.clearance || ""}</Text>
     },
     {
       key: "customer",
@@ -178,6 +242,16 @@ export const ContractsList: React.FunctionComponent<IContractsListProps> = ({ co
       className: styles.centeredColumn,
       ...sortable("startDate"),
       onRender: (item: IContractItem) => <Text>{item.startDate ? formatDate(item.startDate) : "-"}</Text>
+    },
+    {
+      key: "location",
+      name: "Location",
+      fieldName: "location",
+      minWidth: 130,
+      maxWidth: 190,
+      isResizable: true,
+      ...sortable("location"),
+      onRender: (item: IContractItem) => <Text>{item.location || "-"}</Text>
     },
     {
       key: "endDate",
@@ -222,13 +296,14 @@ export const ContractsList: React.FunctionComponent<IContractsListProps> = ({ co
   ];
 
   return (
-    <Stack tokens={{ childrenGap: 4 }} styles={{ root: { marginTop: 24 }}}>
-      <Stack horizontal horizontalAlign="space-between" verticalAlign="center" tokens={{ childrenGap: 12 }}>
+    <Stack tokens={{ childrenGap: 15 }} styles={{ root: { marginTop: 24 }}}>
+      <Stack tokens={{ childrenGap: 10 }}>
+        <Stack horizontal horizontalAlign="space-between" verticalAlign="center" tokens={{ childrenGap: 12 }}>
         <SearchBox
-          placeholder="Search contract, customer, OG, LOB, PM, or partner..."
+          placeholder="Search contract, location, synonyms, customer, clearance, OG, LOB, PM, or partner..."
           value={searchTerm}
           onChange={(_, newValue) => setSearchTerm(newValue || "")}
-          styles={{ root: { width: 460, maxWidth: "100%" } }}
+          styles={{ root: { width: "100%", maxWidth: 700 } }}
         />
 
         {onNewContract && (
@@ -238,7 +313,50 @@ export const ContractsList: React.FunctionComponent<IContractsListProps> = ({ co
             onClick={onNewContract}
           />
         )}
+        </Stack>
+
+        <Stack horizontal tokens={{ childrenGap: 10 }} wrap verticalAlign="center">
+          <Dropdown
+            placeholder="Filter by OG"
+            options={ogOptions}
+            selectedKey={ogFilter}
+            onChange={(_, option) => setOgFilter((option?.key as string) ?? "all")}
+            styles={{ dropdown: { width: 180 } }}
+          />
+          <Dropdown
+            placeholder="Filter by Customer"
+            options={customerOptions}
+            selectedKey={customerFilter}
+            onChange={(_, option) => setCustomerFilter((option?.key as string) ?? "all")}
+            styles={{ dropdown: { width: 220 } }}
+          />
+          <Dropdown
+            placeholder="Filter by Partner"
+            options={partnerOptions}
+            selectedKey={partnerFilter}
+            onChange={(_, option) => setPartnerFilter((option?.key as string) ?? "all")}
+            styles={{ dropdown: { width: 260 } }}
+          />
+          <Dropdown
+            placeholder="Filter by Clearance Level"
+            options={clearanceOptions}
+            selectedKey={clearanceFilter}
+            onChange={(_, option) => setClearanceFilter((option?.key as string) ?? "all")}
+            styles={{ dropdown: { width: 190 } }}
+          />
+          <IconButton
+            iconProps={{ iconName: "ClearFilter" }}
+            title="Reset filters"
+            ariaLabel="Reset filters"
+            disabled={!filtersActive}
+            onClick={handleResetFilters}
+          />
+        </Stack>
       </Stack>
+
+      <Text variant="medium">
+        Showing {filteredContracts.length} of {contracts.length} contracts
+      </Text>
 
       <PaginatedDetailsList
         items={sortedContracts}
@@ -247,8 +365,8 @@ export const ContractsList: React.FunctionComponent<IContractsListProps> = ({ co
         layoutMode={1}
         isHeaderVisible={true}
         onItemInvoked={(item) => onSelectContract(item as IContractItem)}
-        pageSizeOptions={[5, 10, 25, 50]}
-        defaultPageSizeOption={10}
+        pageSizeOptions={[10, 25, 50]}
+        defaultPageSizeOption={25}
         showFirstLastButtons={true}
       />
     </Stack>

@@ -2,6 +2,7 @@ import * as React from "react";
 import { Font, Page, Text, View, Image, Link, StyleSheet } from "@react-pdf/renderer";
 import { ICapabilityItem, IContractItem } from "../common/props";
 import Strings from "../common/strings";
+import { DataSource } from "../data/ds";
 //import { renderRichText } from "./HTMLParser";
 import { formatDate } from "../common/utils";
 
@@ -186,7 +187,6 @@ const CapabilityOnePager: React.FC<ICapabilityOnePagerProps> = (props) => {
 
     const technicalInfoList: string[] = [
         capability.capStatus ? `Capability Status: ${capability.capStatus}` : "",
-        capability.solutionType ? `Solution Type: ${capability.solutionType}` : "",
         capability.platform ? `Platform: ${capability.platform}` : "",
         capability.hostingEnv ? `Hosting Environment: ${capability.hostingEnv}` : "",
         capability.connectivity ? `Connectivity: ${capability.connectivity}` : "",
@@ -228,6 +228,20 @@ const CapabilityOnePager: React.FC<ICapabilityOnePagerProps> = (props) => {
                         <View style={styles.labelRow}>
                             <Text style={styles.label}>Status</Text>
                             <Text style={styles.value}>{capability.capStatus || "—"}</Text>
+                        </View>
+
+                        <View style={styles.labelRow}>
+                            <Text style={styles.label}>Capability Type - Tier 1</Text>
+                            <Text style={styles.value}>
+                                {DataSource.getConfigText("capabilityType", capability.capabilityTypeTier1) || "—"}
+                            </Text>
+                        </View>
+
+                        <View style={styles.labelRow}>
+                            <Text style={styles.label}>Capability Type - Tier 2</Text>
+                            <Text style={styles.value}>
+                                {DataSource.getConfigText("capabilityType", capability.capabilityTypeTier2) || "—"}
+                            </Text>
                         </View>
 
                         <View style={styles.labelRow}>

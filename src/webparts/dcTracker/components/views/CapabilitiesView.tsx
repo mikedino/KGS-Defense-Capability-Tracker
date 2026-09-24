@@ -6,6 +6,8 @@ import { getAtoStatusFill } from "../ui/StatusColors";
 import { Pill } from "../ui/Pill";
 import PaginatedDetailsList from "../ui/PaginatedDetailsList";
 import styles from "../Dct.module.scss";
+import { DataSource } from "../data/ds";
+import Strings from "../common/strings";
 
 export interface ICapabilityContractSummary {
     titles: string[];
@@ -44,9 +46,9 @@ export const CapabilitiesList: React.FunctionComponent<ICapabilitiesListProps> =
                     aVal = (a.platform || "").toLowerCase();
                     bVal = (b.platform || "").toLowerCase();
                     break;
-                case "solutionType":
-                    aVal = (a.solutionType || "").toLowerCase();
-                    bVal = (b.solutionType || "").toLowerCase();
+                case "capabilityType":
+                    aVal = DataSource.getConfigText("capabilityType", a.capabilityTypeTier1 || a.capabilityTypeTier2).toLowerCase();
+                    bVal = DataSource.getConfigText("capabilityType", b.capabilityTypeTier1 || b.capabilityTypeTier2).toLowerCase();
                     break;
                 case "capStatus":
                     aVal = (a.capStatus || "").toLowerCase();
@@ -87,6 +89,15 @@ export const CapabilitiesList: React.FunctionComponent<ICapabilitiesListProps> =
         </div>
     );
 
+    const getCapabilityTypeSummary = (capability: ICapabilityItem): string => [
+        capability.capabilityTypeTier1
+            ? `Tier 1: ${DataSource.getConfigText("capabilityType", capability.capabilityTypeTier1)}`
+            : "",
+        capability.capabilityTypeTier2
+            ? `Tier 2: ${DataSource.getConfigText("capabilityType", capability.capabilityTypeTier2)}`
+            : ""
+    ].filter(Boolean).join(" • ");
+
     if (viewMode === "tile") {
         return (
             <Stack tokens={{ childrenGap: 16 }}>
@@ -125,7 +136,7 @@ export const CapabilitiesList: React.FunctionComponent<ICapabilitiesListProps> =
 
                                     <div className={styles.capabilityTileMeta}>
                                         {renderTileMetaRow("Platform:", capability.platform)}
-                                        {renderTileMetaRow("Solution Type:", capability.solutionType)}
+                                        {renderTileMetaRow("Capability Type:", getCapabilityTypeSummary(capability))}
                                         {renderTileMetaRow("Hosting:", capability.hostingEnv)}
                                         {renderTileMetaRow("Primary POC:", capability.primaryPoc?.Title)}
                                         {renderTileMetaRow("Contract:", contractText)}
@@ -191,16 +202,53 @@ export const CapabilitiesList: React.FunctionComponent<ICapabilitiesListProps> =
             }
         },
         {
-            key: "solutionType",
-            name: "Solution Type",
-            fieldName: "solutionType",
-            minWidth: 140,
-            maxWidth: 210,
+            key: "capabilityType",
+            name: "Capability Type",
+            fieldName: "capabilityTypeTier1",
+            minWidth: 220,
+            maxWidth: 320,
             isResizable: true,
-            isSorted: sortColumnKey === "solutionType",
+            isSorted: sortColumnKey === "capabilityType",
             isSortedDescending,
             onColumnClick,
-            onRender: (item: ICapabilityItem) => <Text>{item.solutionType || ""}</Text>
+            onRender: (item: ICapabilityItem) => (
+                <Stack tokens={{ childrenGap: 2 }}>
+                    {item.capabilityTypeTier1 && (
+                        <div className={styles.capabilityTypeCellRow}>
+                            <span
+                                className={styles.capabilityTypeTierBadge}
+                                style={{
+                                    backgroundColor: Strings.PillStyles.LilacFill,
+                                    borderColor: Strings.PillStyles.LilacColor,
+                                    color: Strings.PillStyles.LilacColor
+                                }}
+                                title="Tier 1"
+                                aria-label="Tier 1"
+                            >
+                                1
+                            </span>
+                            <Text variant="small">{DataSource.getConfigText("capabilityType", item.capabilityTypeTier1)}</Text>
+                        </div>
+                    )}
+                    {item.capabilityTypeTier2 && (
+                        <div className={styles.capabilityTypeCellRow}>
+                            <span
+                                className={styles.capabilityTypeTierBadge}
+                                style={{
+                                    backgroundColor: Strings.PillStyles.PurpleFill,
+                                    borderColor: Strings.PillStyles.PurpleColor,
+                                    color: Strings.PillStyles.PurpleColor
+                                }}
+                                title="Tier 2"
+                                aria-label="Tier 2"
+                            >
+                                2
+                            </span>
+                            <Text variant="small">{DataSource.getConfigText("capabilityType", item.capabilityTypeTier2)}</Text>
+                        </div>
+                    )}
+                </Stack>
+            )
         },
         {
             key: "platform",
@@ -263,8 +311,8 @@ export const CapabilitiesList: React.FunctionComponent<ICapabilitiesListProps> =
                 layoutMode={1}
                 isHeaderVisible={true}
                 onItemInvoked={(item) => onSelectCap(item as ICapabilityItem)}
-                pageSizeOptions={[5, 10, 25, 50]}
-                defaultPageSizeOption={10}
+                pageSizeOptions={[10, 25, 50]}
+                defaultPageSizeOption={25}
                 showFirstLastButtons={true}
             />
         </Stack>

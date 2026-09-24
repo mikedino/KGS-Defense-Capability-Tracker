@@ -64,6 +64,12 @@ export const Configuration = Helper.SPConfig({
             TitleFieldDisplayName: "Contract Title",
             CustomFields: [
                 {
+                    name: "synonyms",
+                    title: "Synonyms",
+                    description: "Additional abbreviations or terms used to find this contract",
+                    type: Helper.SPCfgFieldType.Text
+                },
+                {
                     name: "capability",
                     title: "Capability",
                     description: "Capability this contract relationship belongs to",
@@ -83,6 +89,19 @@ export const Configuration = Helper.SPConfig({
                     title: "Customer Contract Code",
                     type: Helper.SPCfgFieldType.Text,
                     description: "Lookup: Jamis_Data_API => ContractEndPoint => Customer Contract Code"
+                },
+                {
+                    name: "isFlagged",
+                    title: "Flag",
+                    type: Helper.SPCfgFieldType.Boolean,
+                    defaultValue: "0",
+                    description: "Flag this contract to hide details from general users"
+                },
+                {
+                    name: "clearance",
+                    title: "Clearance Level",
+                    type: Helper.SPCfgFieldType.Text,
+                    description: "Choices from the contractClearance configuration type"
                 },
                 {
                     name: "customer",
@@ -143,7 +162,34 @@ export const Configuration = Helper.SPConfig({
                     name: "infoLink",
                     title: "Contract Info Link/URL",
                     type: Helper.SPCfgFieldType.Text
-                }
+                },
+                {
+                    name: "city",
+                    title: "City",
+                    type: Helper.SPCfgFieldType.Text
+                },
+                {
+                    name: "state",
+                    title: "State",
+                    type: Helper.SPCfgFieldType.Text,
+                    description: "Two-letter state abbreviation selected from the state configuration type"
+                },
+                {
+                    name: "country",
+                    title: "Country",
+                    type: Helper.SPCfgFieldType.Text,
+                    defaultValue: "US",
+                    description: "ISO 3166-1 alpha-2 country code"
+                },
+                {
+                    name: "location",
+                    title: "Location",
+                    type: Helper.SPCfgFieldType.Calculated,
+                    resultType: SPTypes.FieldResultType.Text,
+                    formula: '=IF(AND([city]&lt;&gt;"",[state]&lt;&gt;""),[city]&amp;", "&amp;[state],IF([city]&lt;&gt;"",[city],[state]))&amp;IF([country]&lt;&gt;""," ("&amp;[country]&amp;")","")',
+                    fieldRefs: ["city", "state", "country"],
+                    readOnly: true
+                } as Helper.IFieldInfoCalculated
             ],
             ViewInformation: [
                 {
@@ -152,8 +198,11 @@ export const Configuration = Helper.SPConfig({
                     ViewQuery: '<OrderBy><FieldRef Name="contractId" Ascending="TRUE"/><FieldRef Name="Title" Ascending="TRUE"/></OrderBy>',
                     ViewFields: [
                         'LinkTitle',
+                        'synonyms',
                         'capability',
                         'contractId',
+                        'isFlagged',
+                        'clearance',
                         'contractType',
                         'customerContractCode',
                         'ogTitle',
@@ -163,7 +212,8 @@ export const Configuration = Helper.SPConfig({
                         'endDate',
                         'contractPm',
                         'partner',
-                        'infoLink'
+                        'infoLink',
+                        'location'
                     ]
                 }
             ]
@@ -232,6 +282,12 @@ export const Configuration = Helper.SPConfig({
             TitleFieldDisplayName: "Capability Title",
             CustomFields: [
                 {
+                    name: "synonyms",
+                    title: "Synonyms",
+                    description: "Additional abbreviations or terms used to find this capability",
+                    type: Helper.SPCfgFieldType.Text
+                },
+                {
                     name: "description",
                     title: "Capability Description",
                     type: Helper.SPCfgFieldType.Note,
@@ -270,9 +326,15 @@ export const Configuration = Helper.SPConfig({
                     type: Helper.SPCfgFieldType.Text
                 },
                 {
-                    name: "solutionType",
-                    title: "Solution Type",
-                    description: "High-level kind of solution being showcased, such as SPFx, Power App, Power BI, Web App, AI Solution, Mobile App, API/Service, or Automation.",
+                    name: "capabilityTypeTier1",
+                    title: "Capability Type - Tier 1",
+                    description: "Primary capability category. Choices are managed in the configuration list.",
+                    type: Helper.SPCfgFieldType.Text
+                },
+                {
+                    name: "capabilityTypeTier2",
+                    title: "Capability Type - Tier 2",
+                    description: "Secondary capability category. Choices are managed in the configuration list.",
                     type: Helper.SPCfgFieldType.Text
                 },
                 {
@@ -375,8 +437,10 @@ export const Configuration = Helper.SPConfig({
                     ViewQuery: '<OrderBy><FieldRef Name="Modified" Ascending="FALSE" /></OrderBy>',
                     ViewFields: [
                         "LinkTitle",
+                        "synonyms",
                         "capStatus",
-                        "solutionType",
+                        "capabilityTypeTier1",
+                        "capabilityTypeTier2",
                         "platform",
                         "hostingEnv",
                         "connectivity",

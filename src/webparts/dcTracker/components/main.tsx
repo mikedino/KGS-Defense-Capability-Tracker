@@ -36,10 +36,31 @@ import { CapRouteTab, getPathParts, routes } from './routing/routes';
 import { Helper } from 'gd-sprest-bs';
 import { ContractDocumentsPanel } from './views/contracts/ContractDocumentsPanel';
 import { ContractDocumentForm } from './forms/ContractDocumentForm';
+import { ContractCapabilityForm } from './forms/ContractCapabilityForm';
 
 interface CustomFile extends File {
   data: ArrayBuffer;
 }
+
+const spoTealButtonStyles = {
+  root: {
+    backgroundColor: Strings.PillStyles.SPOTealColor,
+    borderColor: Strings.PillStyles.SPOTealColor,
+    color: "#ffffff"
+  },
+  rootHovered: {
+    backgroundColor: Strings.PillStyles.SPOTealColor,
+    borderColor: Strings.PillStyles.SPOTealColor,
+    color: "#ffffff",
+    filter: "brightness(0.9)"
+  },
+  rootPressed: {
+    backgroundColor: Strings.PillStyles.SPOTealColor,
+    borderColor: Strings.PillStyles.SPOTealColor,
+    color: "#ffffff",
+    filter: "brightness(0.82)"
+  }
+};
 
 const DctContent: React.FC<IDCTrackerProps> = (props) => {
   const history = useHistory();
@@ -61,10 +82,15 @@ const DctContent: React.FC<IDCTrackerProps> = (props) => {
   const [showContractDocEditDialog, setShowContractDocEditDialog] = useState<boolean>(false);
   const [showContractDocDeleteDialog, setShowContractDocDeleteDialog] = useState<boolean>(false);
   const [selectedRelationshipCapability, setSelectedRelationshipCapability] = useState<ICapabilityItem | undefined>(undefined);
+  const [showContractCapabilityDialog, setShowContractCapabilityDialog] = useState<boolean>(false);
+  const [contractCapabilityDialogMode, setContractCapabilityDialogMode] = useState<"link" | "edit">("link");
+  const [relationshipCapability, setRelationshipCapability] = useState<ICapabilityItem | undefined>(undefined);
+  const [relationshipSummary, setRelationshipSummary] = useState<string>("");
+  const [relationshipCapabilityToDelete, setRelationshipCapabilityToDelete] = useState<ICapabilityItem | undefined>(undefined);
 
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [capStatusFilter, setCapStatusFilter] = useState<string>("all");
-  const [solutionTypeFilter, setSolutionTypeFilter] = useState<string>("all");
+  const [capabilityTypeFilter, setCapabilityTypeFilter] = useState<string>("all");
   const [platformFilter, setPlatformFilter] = useState<string>("all");
 
   const [viewMode, setViewMode] = useState<string>("list");
@@ -209,12 +235,14 @@ const DctContent: React.FC<IDCTrackerProps> = (props) => {
     // into SharePoint/React object metadata or match hidden relationship data unexpectedly.
     const searchableCapabilityFields: Array<keyof ICapabilityItem> = [
       "Title",
+      "synonyms",
       "description",
       "capabilities",
       "link",
       "capStatus",
       "notes",
-      "solutionType",
+      "capabilityTypeTier1",
+      "capabilityTypeTier2",
       "platform",
       "hostingEnv",
       "connectivity",
@@ -244,6 +272,10 @@ const DctContent: React.FC<IDCTrackerProps> = (props) => {
       // Build one searchable string per capability from direct fields only.
       const capabilitySearchText = searchableCapabilityFields
         .map((fieldName) => toSearchText(cap[fieldName]))
+        .concat(
+          DataSource.getConfigText("capabilityType", cap.capabilityTypeTier1),
+          DataSource.getConfigText("capabilityType", cap.capabilityTypeTier2)
+        )
         .concat(contractSummaryByCapabilityId.get(cap.Id)?.searchText ?? "")
         .join(" ")
         .toLowerCase();
@@ -258,16 +290,18 @@ const DctContent: React.FC<IDCTrackerProps> = (props) => {
   const filteredCapabilities = React.useMemo(() => {
     return searchFilteredCapabilities.filter((cap) => {
       const matchesCapStatus = capStatusFilter === "all" || cap.capStatus === capStatusFilter;
-      const matchesSolutionType = solutionTypeFilter === "all" || cap.solutionType === solutionTypeFilter;
+      const matchesCapabilityType = capabilityTypeFilter === "all"
+        || cap.capabilityTypeTier1 === capabilityTypeFilter
+        || cap.capabilityTypeTier2 === capabilityTypeFilter;
       const matchesPlatform = platformFilter === "all" || cap.platform === platformFilter;
-      return matchesCapStatus && matchesSolutionType && matchesPlatform;
+      return matchesCapStatus && matchesCapabilityType && matchesPlatform;
     });
-  }, [searchFilteredCapabilities, capStatusFilter, solutionTypeFilter, platformFilter]);
+  }, [searchFilteredCapabilities, capStatusFilter, capabilityTypeFilter, platformFilter]);
 
   const handleResetFilters = (): void => {
     setSearchTerm("");
     setCapStatusFilter("all");
-    setSolutionTypeFilter("all");
+    setCapabilityTypeFilter("all");
     setPlatformFilter("all");
   };
 
@@ -275,6 +309,11 @@ const DctContent: React.FC<IDCTrackerProps> = (props) => {
     setShowContractForm(false);
     setSelectedContract(undefined);
     setIsContractEditMode(false);
+    setShowContractCapabilityDialog(false);
+    setRelationshipCapability(undefined);
+    setRelationshipSummary("");
+    setRelationshipCapabilityToDelete(undefined);
+    setSelectedRelationshipCapability(undefined);
 
     const parts = getPathParts(location.pathname);
     if ((parts[0] ?? "").toLowerCase() === "contracts" && parts[1]) {
@@ -285,7 +324,7 @@ const DctContent: React.FC<IDCTrackerProps> = (props) => {
   const filtersActive =
     searchTerm !== "" ||
     capStatusFilter !== "all" ||
-    solutionTypeFilter !== "all" ||
+    capabilityTypeFilter !== "all" ||
     platformFilter !== "all";
 
   React.useEffect(() => {
@@ -390,10 +429,10 @@ const DctContent: React.FC<IDCTrackerProps> = (props) => {
     ];
   }, [capabilities.length, loading]);
 
-  const solutionTypeOptions: IDropdownOption[] = React.useMemo(() => {
+  const capabilityTypeOptions: IDropdownOption[] = React.useMemo(() => {
     return [
-      { key: "all", text: "All Solution Types" },
-      ...DataSource.getConfigOptions("solutionType")
+      { key: "all", text: "All Capability Types" },
+      ...DataSource.getConfigOptions("capabilityType")
     ];
   }, [capabilities.length, loading]);
 
@@ -547,6 +586,81 @@ const DctContent: React.FC<IDCTrackerProps> = (props) => {
       setShowContractDocDeleteDialog(false);
       setShowContractDocEditDialog(false);
       setSelectedContractDocument(undefined);
+    } finally {
+      setShowSpinner(false);
+    }
+  };
+
+  const refreshSelectedContractRelationships = async (contractId: number): Promise<void> => {
+    const refreshedContracts = await DataSource.refreshContracts();
+    setContracts([...refreshedContracts]);
+    setSelectedContract(refreshedContracts.find((contract) => contract.Id === contractId));
+  };
+
+  const openLinkCapabilityDialog = (): void => {
+    setContractCapabilityDialogMode("link");
+    setRelationshipCapability(undefined);
+    setRelationshipSummary("");
+    setShowContractCapabilityDialog(true);
+  };
+
+  const openEditCapabilitySummaryDialog = (capability: ICapabilityItem): void => {
+    setContractCapabilityDialogMode("edit");
+    setRelationshipCapability(capability);
+    setRelationshipSummary(
+      selectedContract
+        ? DataSource.getContractCapabilitySummary(selectedContract.Id, capability.Id)?.summary ?? ""
+        : ""
+    );
+    setShowContractCapabilityDialog(true);
+  };
+
+  const handleSaveContractCapability = async (): Promise<void> => {
+    if (!selectedContract || !relationshipCapability) return;
+
+    setSpinnerMessage(contractCapabilityDialogMode === "link" ? "Linking capability..." : "Updating relationship summary...");
+    setShowSpinner(true);
+
+    try {
+      if (contractCapabilityDialogMode === "link") {
+        await ContractService.linkCapability(
+          selectedContract,
+          relationshipCapability.Id,
+          relationshipCapability.Title,
+          relationshipSummary
+        );
+      } else {
+        await ContractService.updateCapabilitySummary(
+          selectedContract,
+          relationshipCapability.Id,
+          relationshipCapability.Title,
+          relationshipSummary
+        );
+      }
+
+      await refreshSelectedContractRelationships(selectedContract.Id);
+      setShowContractCapabilityDialog(false);
+      setRelationshipCapability(undefined);
+      setRelationshipSummary("");
+    } catch (error) {
+      setDialogProps("Error saving capability relationship", formatError(error));
+    } finally {
+      setShowSpinner(false);
+    }
+  };
+
+  const handleUnlinkCapability = async (): Promise<void> => {
+    if (!selectedContract || !relationshipCapabilityToDelete) return;
+
+    setSpinnerMessage("Unlinking capability...");
+    setShowSpinner(true);
+
+    try {
+      await ContractService.unlinkCapability(selectedContract, relationshipCapabilityToDelete.Id);
+      await refreshSelectedContractRelationships(selectedContract.Id);
+      setRelationshipCapabilityToDelete(undefined);
+    } catch (error) {
+      setDialogProps("Error unlinking capability", formatError(error));
     } finally {
       setShowSpinner(false);
     }
@@ -731,42 +845,44 @@ const DctContent: React.FC<IDCTrackerProps> = (props) => {
               {selectedPivot === "caps" && (
                 <Stack tokens={{ childrenGap: 15 }} styles={{ root: { marginTop: 20, marginBottom: 20 } }}>
                   {/* Filters */}
-                  <Stack horizontal tokens={{ childrenGap: 10 }} wrap verticalAlign='center'>
+                  <Stack tokens={{ childrenGap: 10 }}>
                     <SearchBox
                       placeholder="Search any capability field..."
                       value={searchTerm}
                       onChange={(_, newValue) => setSearchTerm(newValue || "")}
-                      styles={{ root: { width: 325 } }}
+                      styles={{ root: { width: "100%", maxWidth: 700 } }}
                     />
-                    <Dropdown
-                      placeholder="Filter by Capability Status"
-                      options={capStatusOptions}
-                      selectedKey={capStatusFilter}
-                      onChange={(_, option) => setCapStatusFilter((option?.key as string) ?? "all")}
-                      styles={{ dropdown: { width: 180 } }}
-                    />
-                    <Dropdown
-                      placeholder="Filter by Solution Type"
-                      options={solutionTypeOptions}
-                      selectedKey={solutionTypeFilter}
-                      onChange={(_, option) => setSolutionTypeFilter((option?.key as string) ?? "all")}
-                      styles={{ dropdown: { width: 240 } }}
-                    />
-                    <Dropdown
-                      placeholder="Filter by Platform"
-                      options={platformOptions}
-                      selectedKey={platformFilter}
-                      onChange={(_, option) => setPlatformFilter((option?.key as string) ?? "all")}
-                      styles={{ dropdown: { width: 160 } }}
-                    />
+                    <Stack horizontal tokens={{ childrenGap: 10 }} wrap verticalAlign='center'>
+                      <Dropdown
+                        placeholder="Filter by Capability Status"
+                        options={capStatusOptions}
+                        selectedKey={capStatusFilter}
+                        onChange={(_, option) => setCapStatusFilter((option?.key as string) ?? "all")}
+                        styles={{ dropdown: { width: 180 } }}
+                      />
+                      <Dropdown
+                        placeholder="Filter by Capability Type"
+                        options={capabilityTypeOptions}
+                        selectedKey={capabilityTypeFilter}
+                        onChange={(_, option) => setCapabilityTypeFilter((option?.key as string) ?? "all")}
+                        styles={{ root: { width: 425, maxWidth: "100%" }, dropdown: { width: "100%" } }}
+                      />
+                      <Dropdown
+                        placeholder="Filter by Platform"
+                        options={platformOptions}
+                        selectedKey={platformFilter}
+                        onChange={(_, option) => setPlatformFilter((option?.key as string) ?? "all")}
+                        styles={{ dropdown: { width: 160 } }}
+                      />
 
-                    <IconButton
-                      iconProps={{ iconName: "ClearFilter" }}
-                      title="Reset filters"
-                      ariaLabel="Reset filters"
-                      disabled={!filtersActive}
-                      onClick={handleResetFilters}
-                    />
+                      <IconButton
+                        iconProps={{ iconName: "ClearFilter" }}
+                        title="Reset filters"
+                        ariaLabel="Reset filters"
+                        disabled={!filtersActive}
+                        onClick={handleResetFilters}
+                      />
+                    </Stack>
                   </Stack>
 
                   {/* View Toggle */}
@@ -949,20 +1065,31 @@ const DctContent: React.FC<IDCTrackerProps> = (props) => {
                     history.push(routes.cap(capability.Id));
                   }}
                   onViewCapabilityRelationship={(capability) => setSelectedRelationshipCapability(capability)}
+                  onEditCapabilityRelationship={!Security.IsVisitor ? openEditCapabilitySummaryDialog : undefined}
+                  onDeleteCapabilityRelationship={!Security.IsVisitor ? setRelationshipCapabilityToDelete : undefined}
                 />
               </div>
 
               <div className={styles.contractViewActions}>
                 <div className={styles.contractViewActionsLeft}>
                   {!Security.IsVisitor && (
-                    <PrimaryButton
-                      text="Add Document"
-                      iconProps={{ iconName: "Add" }}
-                      onClick={() => {
-                        setContractDocumentType(undefined);
-                        setShowContractDocUploadDialog(true);
-                      }}
-                    />
+                    <>
+                      <PrimaryButton
+                        text="Add Document"
+                        iconProps={{ iconName: "Add" }}
+                        styles={spoTealButtonStyles}
+                        onClick={() => {
+                          setContractDocumentType(undefined);
+                          setShowContractDocUploadDialog(true);
+                        }}
+                      />
+                      <PrimaryButton
+                        text="Link Capability"
+                        iconProps={{ iconName: "Link" }}
+                        styles={spoTealButtonStyles}
+                        onClick={openLinkCapabilityDialog}
+                      />
+                    </>
                   )}
                 </div>
 
@@ -1033,6 +1160,66 @@ const DctContent: React.FC<IDCTrackerProps> = (props) => {
               </ContractForm>
             </Stack>
           )}
+        </Dialog>
+
+        {/* Add or edit a contract-capability relationship and its summary. */}
+        <Dialog
+          hidden={!showContractCapabilityDialog}
+          onDismiss={() => setShowContractCapabilityDialog(false)}
+          dialogContentProps={{
+            type: DialogType.largeHeader,
+            title: contractCapabilityDialogMode === "link" ? "Link Capability" : "Edit Capability Summary",
+            closeButtonAriaLabel: "Close",
+            subText: selectedContract?.Title
+          }}
+          modalProps={{
+            isBlocking: true,
+            styles: { main: { width: "620px !important", maxWidth: "90vw !important" } }
+          }}
+        >
+          <ContractCapabilityForm
+            capabilities={capabilities}
+            linkedCapabilityIds={new Set(ContractService.getCapabilityLookups(selectedContract).map((capability) => capability.Id))}
+            selectedCapability={relationshipCapability}
+            summary={relationshipSummary}
+            isEditMode={contractCapabilityDialogMode === "edit"}
+            onCapabilityChange={setRelationshipCapability}
+            onSummaryChange={setRelationshipSummary}
+          />
+          <DialogFooter>
+            <PrimaryButton
+              text={contractCapabilityDialogMode === "link" ? "Link Capability" : "Save Summary"}
+              iconProps={{ iconName: contractCapabilityDialogMode === "link" ? "Link" : "Save" }}
+              disabled={!relationshipCapability}
+              onClick={() => { handleSaveContractCapability().catch(() => undefined); }}
+            />
+            <DefaultButton text="Cancel" onClick={() => setShowContractCapabilityDialog(false)} />
+          </DialogFooter>
+        </Dialog>
+
+        {/* Confirm that only the relationship—not either record—will be removed. */}
+        <Dialog
+          hidden={!relationshipCapabilityToDelete}
+          onDismiss={() => setRelationshipCapabilityToDelete(undefined)}
+          dialogContentProps={{
+            type: DialogType.normal,
+            title: "Unlink Capability",
+            closeButtonAriaLabel: "Cancel",
+            subText: relationshipCapabilityToDelete
+              ? `Remove the link between ${relationshipCapabilityToDelete.Title} and ${selectedContract?.Title ?? "this contract"}? The capability and contract records will not be deleted.`
+              : undefined
+          }}
+          modalProps={{ isBlocking: true }}
+        >
+          <DialogFooter>
+            <PrimaryButton
+              text="Unlink"
+              className={styles.deleteButton}
+              iconProps={{ iconName: "Delete" }}
+              onClick={() => { handleUnlinkCapability().catch(() => undefined); }}
+            />
+            <DefaultButton text="Cancel" onClick={() => setRelationshipCapabilityToDelete(undefined)} />
+          </DialogFooter>
         </Dialog>
 
         {/* Contract-capability relationship summary dialog */}

@@ -102,9 +102,12 @@ export class ContractService {
         return {
             __metadata: { type: ContractService.getListItemType() },
             Title: item.Title,
+            synonyms: item.synonyms,
             capabilityId: { results: ContractService.getCapabilityLookups(item).map(c => c.Id) },
             contractId: item.contractId,
             customerContractCode: item.customerContractCode,
+            isFlagged: item.isFlagged ?? false,
+            clearance: item.clearance,
             contractType: item.contractType,
             contractValue: item.contractValue ?? 0,
             customer: item.customer,
@@ -114,7 +117,10 @@ export class ContractService {
             endDate: ContractService.normalizeDateValue(item.endDate),
             contractPmId: item.contractPm?.Id ?? null,
             partner: item.partner,
-            infoLink: item.infoLink
+            infoLink: item.infoLink,
+            city: item.city,
+            state: item.state,
+            country: (item.country ?? "US").trim().toUpperCase().slice(0, 2)
         };
     }
 
@@ -169,6 +175,61 @@ export class ContractService {
                 }
             );
         });
+    }
+
+    static async linkCapability(
+        contract: IContractItem,
+        capabilityId: number,
+        capabilityTitle: string,
+        summary: string
+    ): Promise<IContractItem> {
+        const updated = await ContractService.edit({
+            ...contract,
+            capability: {
+                results: ContractService.mergeCapabilityLookup(
+                    ContractService.getCapabilityLookups(contract),
+                    capabilityId,
+                    capabilityTitle
+                )
+            }
+        });
+
+        await ContractCapabilitySummaryService.upsertForRelationship(
+            updated,
+            capabilityId,
+            capabilityTitle,
+            { capabilitySummary: summary }
+        );
+        return updated;
+    }
+
+    static updateCapabilitySummary(
+        contract: IContractItem,
+        capabilityId: number,
+        capabilityTitle: string,
+        summary: string
+    ): Promise<unknown> {
+        return ContractCapabilitySummaryService.upsertForRelationship(
+            contract,
+            capabilityId,
+            capabilityTitle,
+            { capabilitySummary: summary }
+        );
+    }
+
+    static async unlinkCapability(contract: IContractItem, capabilityId: number): Promise<IContractItem> {
+        const updated = await ContractService.edit({
+            ...contract,
+            capability: {
+                results: ContractService.removeCapabilityLookup(
+                    ContractService.getCapabilityLookups(contract),
+                    capabilityId
+                )
+            }
+        });
+
+        await ContractCapabilitySummaryService.deleteForRelationship(contract.Id, capabilityId);
+        return updated;
     }
 
     static delete(itemId: number): Promise<void> {
