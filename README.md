@@ -194,7 +194,7 @@ Key application areas:
 | 1.0.0.5 | July 28, 2026 | Landino | Add clickable title in grids. Add Tile view. Add POC and Stakeholders to overview. |
 | 1.0.0.7 | July 29, 2026 | Landino | Add contract VIEW modal and capability relationship on view. Remove custom permissions on Capabilities and Contracts. Change contract > capability lookup/relationship to be 1:X |
 | 2.0.0.1 | August 11, 2026 | Landino | Move dashboard to end, allow creating contract entry, add CMS contracts to dropdown search (combine/normalize with JAMIS), Add contract value & type, add Capability Summary, Add Contract Documents |
-| 2.0.1.3 | September 23, 2026 | Landino | Add contract fields Flagged, Clearance Level, Location, Synonyms. Add Capability Type, Synonyms to Capabilities. Adjust cap details tabs - accordion contracts, move columns, condense tagging. Add/adjust filters on both Caps & Contracts grids. |
+| 2.0.1.4 | September 23, 2026 | Landino | Add contract fields Flagged, Clearance Level, Location, Synonyms. Add Capability Type, Synonyms to Capabilities. Adjust cap details tabs - accordion contracts, move columns, condense tagging. Add/adjust filters on both Caps & Contracts grids. Changed CMS list location to new archive list. |
 
 ## Disclaimer
 
